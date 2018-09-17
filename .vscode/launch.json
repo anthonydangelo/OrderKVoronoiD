@@ -1,0 +1,57 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch-Dbg",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/OrderKVoronoiD_d",
+            "args": ["-n", "4", "-i", "[[6, 0],[9.58, 0.44],[ 12,5],[14,1]]"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            //"console": "internalConsole",
+            //"console": "integratedTerminal",
+            "externalConsole": true,
+            //"externalConsole": false, //doesn't send output to debug... = (
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+            ,
+            "preLaunchTask": "build-debug"
+        },
+        {
+            "name": "(gdb) Launch-release",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/OrderKVoronoiD",
+            "args": ["-n", "9", ],            
+//            "args": ["-n", "4", "-p", "-f", "tmp/123", "-i", "[[-0.383454, 5.91613],[0, 1.25],[ 0.3, 0.55]"],
+//            "args": ["-n", "6", "-i", "[[-3.90489, 6.63088],[12, 10],[ 3.9798,-1.35515], [4.26357,6.28631],[7.68905,0],[14.01301,4.46209]]"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            //"console": "internalConsole",
+            //"console": "integratedTerminal",
+            "externalConsole": true,
+            //"externalConsole": false, //doesn't send output to debug... = (
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build-release"
+        }        
+    ]
+}

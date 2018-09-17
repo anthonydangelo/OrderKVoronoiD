@@ -1,0 +1,62 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-debug",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-g", "-frounding-math", "-std=c++11", "-pthread",
+                "src/OrderKVoronoiD.cpp", "src/printFormattingUtilFunctions.cpp", "src/utilityFunctions.cpp",
+                "-o", "OrderKVoronoiD_d",
+//                "-fpermissive",
+                "-static",
+                "-L/home/anthonydangelo/CGAL-4.11.2/lib",
+//                "-Wl,--whole-archive", "-lpthread", "-Wl,--no-whole-archive",
+                "-lCGAL_Core_d", 
+                "-lCGAL_d", 
+                "-lmpfr", 
+                 "-lgmp", 
+//                 "-lCGAL_Core", "-lCGAL", 
+                 "-lboost_thread", 
+                 "-lboost_system",
+                 "-lpthread" 
+//                 ,"-DCGAL_DONT_USE_LAZY_KERNEL=1", "-DCGAL_USE_GMP=1"
+//                 ,"-DCGAL_USE_GMP", "-DCGAL_USE_MPFR"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher":"$gcc"            
+        },
+        {
+            "label": "build-release",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-O2", "-frounding-math", "-std=c++11", "-pthread",
+                "src/OrderKVoronoiD.cpp", "src/printFormattingUtilFunctions.cpp", "src/utilityFunctions.cpp",
+                "-o", "OrderKVoronoiD",
+//                "-fpermissive",
+                "-static",
+                "-L/home/anthonydangelo/CGAL-4.11.2/lib",
+//                "-Wl,--whole-archive", "-lpthread", "-Wl,--no-whole-archive",
+                "-lCGAL_Core", 
+                "-lCGAL", 
+                "-lmpfr", 
+                 "-lgmp", 
+//                 "-lCGAL_Core", "-lCGAL", 
+                 "-lboost_thread", 
+                 "-lboost_system",
+                 "-lpthread" 
+//                 ,"-DCGAL_DONT_USE_LAZY_KERNEL=1", "-DCGAL_USE_GMP=1"
+//                 ,"-DCGAL_USE_GMP", "-DCGAL_USE_MPFR"
+            ],
+            "group": "build",
+            "problemMatcher":"$gcc"            
+        }        
+    ]
+}
