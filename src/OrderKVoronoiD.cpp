@@ -58,7 +58,6 @@ void PrintHelp()
 
 int order = DEFAULT_ORDER;
 string inputListString = "";
-vector< MyPoint_2 > endpointsVec;
 vector< pair<size_t, size_t> > segmentEndPtsVec;
 
 //https://codeyarns.com/2015/01/30/how-to-parse-program-options-in-c-using-getopt_long/
@@ -142,7 +141,7 @@ void ProcessArgs(int argc, char **argv, vector<MyPoint_2>& inputListVec)
       }
     }
 
-void build_dual_(Voronoi_from_tri& v_recup,const MyKernel::Iso_rectangle_2& bbox)
+void build_dual_(Voronoi_from_tri& v_recup,const MyKernel::Iso_rectangle_2& bbox, vector< MyPoint_2 >& endpointsVec)
     {
       vector<MySegment_2> seg_cont;
       //filter degenerate segments
@@ -161,21 +160,22 @@ void build_dual_(Voronoi_from_tri& v_recup,const MyKernel::Iso_rectangle_2& bbox
     }
 
 template<class Triangulation>
-void build_dual_edge_list(Triangulation& T,const MyKernel::Iso_rectangle_2& bbox)
+void build_dual_edge_list(Triangulation& T,const MyKernel::Iso_rectangle_2& bbox, vector< MyPoint_2 >& endpointsVec)
     {
     //~ template<class GT,class TDS>
     //~ void draw_dual_in_ipe(const CGAL::Triangulation_2<GT,TDS>& T,const Iso_rectangle_2& bbox) const{
       Voronoi_from_tri v_recup;
       T.draw_dual(v_recup);
-      build_dual_(v_recup,bbox);
+      build_dual_(v_recup,bbox, endpointsVec);
     }
 
 int main(int argc, char **argv)
 {
 
     vector<MyPoint_2> inputListVec;
+    vector< MyPoint_2 > endpointsVec;
 
-    //There's some kind of CGAL destructor bug that blows up if we have this vector as a global...
+    //There's some kind of CGAL destructor bug that blows up if we have these vectors as globals...
     ProcessArgs(argc, argv, inputListVec);
 
     sem_t* pSem = sem_open(SEMAPHORE_NAME, O_CREAT, (S_IRWXU | S_IRWXG), SEMAPHORE_INIT_VALUE);
@@ -288,15 +288,15 @@ int main(int argc, char **argv)
 
     if (1 == order)
     {
-        build_dual_edge_list(dt,bbox);
+        build_dual_edge_list(dt,bbox, endpointsVec);
     } 
     else if (2 == order)
     {
-        build_dual_edge_list(rti,bbox);
+        build_dual_edge_list(rti,bbox, endpointsVec);
     }
     else 
     {
-        build_dual_edge_list(rt,bbox);
+        build_dual_edge_list(rt,bbox, endpointsVec);
     }
 
     ostringstream sStream;
