@@ -5,6 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**", 
                 "${env:PATH}/**",
+                "/usr/include",
                 "/usr/local/include",
                 "/usr/local/lib"
             ],
@@ -12,11 +13,12 @@
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c11",
             "cppStandard": "c++11",
-            "intelliSenseMode": "clang-x64",
+            "intelliSenseMode": "linux-gcc-x64",
             "browse": {
                 "path": [
                     "${workspaceFolder}",
                     "${env:PATH}/**",
+                    "/usr/include",
                     "/usr/local/include",
                     "/usr/local/lib"
                 ]
