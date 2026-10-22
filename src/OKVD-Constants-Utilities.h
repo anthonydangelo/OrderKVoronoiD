@@ -196,17 +196,9 @@ namespace okvd
 
 /*
 **
-** Why namespace Marisa_Tomei? 
-** A few of her movies have been on tv lately. 
-** They left me wanting to see more of her...
-** I think it's a fitting name for pretty print functions.
-**
-** Plus, since it's likely that I'm the only one who's ever going
-** to see/use this, I can call it whatever I want as long as she doesn't mind. I hope she doesn't...
-** Plus, I'm a fan.
 **
  */
-    namespace Marisa_Tomei
+    namespace Pretty_Print
     {
         inline string wrapStringInQuotes(const string &s)
         {
@@ -240,6 +232,6 @@ namespace okvd
                                             const vector< pair<size_t, size_t> >& segmentEndPtsVec, 
                                             int tabLevel = 0);
     
-    } // namespace Marisa_Tomei
+    } // namespace Pretty_Print
 } // namespace okvd
 #endif

@@ -309,11 +309,11 @@ int main(int argc, char **argv)
     ostringstream sStream;
 
 
-    sStream << "{\n" << Marisa_Tomei::wrapStringInQuotes(ORDER_NAME_STRING) << ": \"" << order << "\",";
-    sStream << "\n" << Marisa_Tomei::wrapStringInQuotes(VD_NAME_STRING) << ": ";
-    sStream << Marisa_Tomei::voronoiDiagramToJSONString(endpointsVec, segmentEndPtsVec) << ",\n";
+    sStream << "{\n" << Pretty_Print::wrapStringInQuotes(ORDER_NAME_STRING) << ": \"" << order << "\",";
+    sStream << "\n" << Pretty_Print::wrapStringInQuotes(VD_NAME_STRING) << ": ";
+    sStream << Pretty_Print::voronoiDiagramToJSONString(endpointsVec, segmentEndPtsVec) << ",\n";
 
-    sStream << Marisa_Tomei::wrapStringInQuotes(ELAPSED_TIME_NAME_STRING) << " : {";
+    sStream << Pretty_Print::wrapStringInQuotes(ELAPSED_TIME_NAME_STRING) << " : {";
     // Record end time
     auto finish = std::chrono::high_resolution_clock::now();
 
