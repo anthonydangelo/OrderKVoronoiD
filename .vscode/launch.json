@@ -9,19 +9,24 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/OrderKVoronoiD_d",
-            "args": ["-n", "4", "-i", "[[6, 0],[9.58, 0.44],[ 12,5],[14,1]]"],
+            "args": ["-o", "2", "-i", "\"[[6, 0],[9.58, 0.44],[ 12,5],[14,1]]\""],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             //"console": "internalConsole",
             //"console": "integratedTerminal",
             "externalConsole": true,
-            //"externalConsole": false, //doesn't send output to debug... = (
+//            "externalConsole": false, //doesn't send output to debug... = (
             "MIMode": "gdb",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
                     "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Disable debuginfod",
+                    "text": "set debuginfod urls \"\"",
                     "ignoreFailures": true
                 }
             ]

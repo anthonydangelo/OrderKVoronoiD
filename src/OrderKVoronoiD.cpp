@@ -78,7 +78,7 @@ namespace okvd
 
             if (-1 == opt)
             {
-                return false;
+                break;
             }
 
             switch (opt)
@@ -116,7 +116,6 @@ namespace okvd
             case 'h': // -h or --help
             case '?': // Unrecognized option
             default:
-                PrintHelp();
                 return false;
             }
         }
@@ -188,10 +187,16 @@ int main(int argc, char **argv)
     vector<MyPoint_2> inputListVec;
     vector< MyPoint_2 > endpointsVec;
 
-    if (!ProcessArgs(argc, argv, inputListVec))
-    {
+    if ( (1 == argc)
+        || !ProcessArgs(argc, argv, inputListVec) 
+        || inputListVec.empty()
+        || order < 1    // order is defaulted or set in ProcessArgs
+        || order >= inputListVec.size()) 
+    {        
+        PrintHelp();
         return 1;
     }
+
 
     sem_t* pSem = sem_open(SEMAPHORE_NAME, O_CREAT, (S_IRWXU | S_IRWXG), SEMAPHORE_INIT_VALUE);
 
@@ -206,7 +211,7 @@ int main(int argc, char **argv)
 //https://www.pluralsight.com/blog/software-development/how-to-measure-execution-time-intervals-in-c--
     // Record start time
     auto start = std::chrono::high_resolution_clock::now();
-
+    
     size_t numInPoints = inputListVec.size();
 
     MyKernel::Iso_rectangle_2 bbox = Utility_Functions::computeBBox(inputListVec);
@@ -293,11 +298,6 @@ int main(int argc, char **argv)
     else
     {
         //k-th Delauney and Voronoi
-        if (order < 1 || order >= numInPoints)
-        {
-            //Garbage request or the answer is the whole plane
-            return 1;
-        }
         k_delaunay<MyKernel>(rt, inputListVec, order);
     }
 
