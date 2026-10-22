@@ -50,12 +50,11 @@ namespace okvd
     void PrintHelp()
     {
         ostringstream msg;
-        msg << "--inputList (-i) <string s = [[x,y],[u,v],...]>: Calculate the VD of these points\n"
+        msg << "--inputList (-i) <string s = \"[[x,y],[u,v],...]\">: Calculate the VD of these points (need quotes)\n"
             "--order (-o) <int k>: Calculate the k'th-order VD (defaults to " << DEFAULT_ORDER << ")\n"
             "--help (-h):              Show help\n";
 
         cout << msg.str();
-        exit(1);
     }
 
     int order = DEFAULT_ORDER;
@@ -63,7 +62,7 @@ namespace okvd
     vector< pair<size_t, size_t> > segmentEndPtsVec;
 
     //https://codeyarns.com/2015/01/30/how-to-parse-program-options-in-c-using-getopt_long/
-    void ProcessArgs(int argc, char **argv, vector<MyPoint_2>& inputListVec)
+    bool ProcessArgs(int argc, char **argv, vector<MyPoint_2>& inputListVec)
     {
         const char *const short_opts = "i:o:h";
         const option long_opts[] = {
@@ -78,7 +77,9 @@ namespace okvd
             const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
 
             if (-1 == opt)
-                break;
+            {
+                return false;
+            }
 
             switch (opt)
             {
@@ -116,42 +117,47 @@ namespace okvd
             case '?': // Unrecognized option
             default:
                 PrintHelp();
-                break;
+                return false;
             }
         }
-        return;
+        return true;
     }
 
     template <class T,class output_iterator>
-        bool cast_into_seg(const T& obj,const MyKernel::Iso_rectangle_2& bbox,output_iterator out_it) 
-        {
+    bool cast_into_seg(const T& obj,const MyKernel::Iso_rectangle_2& bbox,output_iterator out_it) 
+    {
         CGAL::Object obj_cgal = CGAL::intersection(obj,bbox);
         MySegment_2 s;
         bool ret=CGAL::assign(s, obj_cgal);
-        if (ret) *out_it++=s;
-        return ret;
+        if (ret) 
+        {
+            *out_it = s;
+            ++out_it;
         }
+        return ret;
+    }
 
     //Convert infinite objects into drawable segments
-        template<class iterator,class output_iterator>
-        void cast_into_seg(const iterator first,const iterator end,
+    template<class iterator,class output_iterator>
+    void cast_into_seg(const iterator first,const iterator end,
                     const MyKernel::Iso_rectangle_2& bbox, output_iterator out_it)
-        {
+    {
         for (iterator it=first; it!=end; ++it)
         {
             cast_into_seg(*it,bbox,out_it);
         }
-        }
+    }
 
     void build_dual_(Voronoi_from_tri& v_recup,const MyKernel::Iso_rectangle_2& bbox, vector< MyPoint_2 >& endpointsVec)
-        {
+    {
         vector<MySegment_2> seg_cont;
         //filter degenerate segments
-        for(typename list<MySegment_2>::iterator iteS = v_recup.seg_list.begin(); iteS!=v_recup.seg_list.end();){
+        for(typename list<MySegment_2>::iterator iteS = v_recup.seg_list.begin(); iteS!=v_recup.seg_list.end();)
+        {
             typename list<MySegment_2>::iterator itc=iteS++;
             if (itc->is_degenerate())
             {
-            v_recup.seg_list.erase(itc);
+                v_recup.seg_list.erase(itc);
             }
         }
         
@@ -159,17 +165,17 @@ namespace okvd
         cast_into_seg(v_recup.line_list.begin(),v_recup.line_list.end(),bbox,std::back_inserter(seg_cont));//cast lines into segments in bbox
         cast_into_seg(v_recup.seg_list.begin(),v_recup.seg_list.end(),bbox,std::back_inserter(seg_cont));//cast lines into segments in bbox
         Utility_Functions::insertSegmentEndpointsIntoPointSet(seg_cont, endpointsVec, segmentEndPtsVec);
-        }
+    }
 
     template<class Triangulation>
     void build_dual_edge_list(Triangulation& T,const MyKernel::Iso_rectangle_2& bbox, vector< MyPoint_2 >& endpointsVec)
-        {
+    {
         //~ template<class GT,class TDS>
         //~ void draw_dual_in_ipe(const CGAL::Triangulation_2<GT,TDS>& T,const Iso_rectangle_2& bbox) const{
         Voronoi_from_tri v_recup;
         T.draw_dual(v_recup);
         build_dual_(v_recup,bbox, endpointsVec);
-        }
+    }
 
 } // namespace okvd
 
@@ -182,8 +188,10 @@ int main(int argc, char **argv)
     vector<MyPoint_2> inputListVec;
     vector< MyPoint_2 > endpointsVec;
 
-    //There's some kind of CGAL destructor bug that blows up if we have these vectors as globals...
-    ProcessArgs(argc, argv, inputListVec);
+    if (!ProcessArgs(argc, argv, inputListVec))
+    {
+        return 1;
+    }
 
     sem_t* pSem = sem_open(SEMAPHORE_NAME, O_CREAT, (S_IRWXU | S_IRWXG), SEMAPHORE_INIT_VALUE);
 
