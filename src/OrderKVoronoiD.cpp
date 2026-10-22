@@ -45,129 +45,136 @@
 #include <semaphore.h>
 #include <errno.h>
 
-void PrintHelp()
+namespace okvd 
 {
-    ostringstream msg;
-    msg << "--inputList (-i) <string s = [[x,y],[u,v],...]>: Calculate the VD of these points\n"
-           "--order (-o) <int k>: Calculate the k'th-order VD (defaults to " << DEFAULT_ORDER << ")\n"
-           "--help (-h):              Show help\n";
-
-    cout << msg.str();
-    exit(1);
-}
-
-int order = DEFAULT_ORDER;
-string inputListString = "";
-vector< pair<size_t, size_t> > segmentEndPtsVec;
-
-//https://codeyarns.com/2015/01/30/how-to-parse-program-options-in-c-using-getopt_long/
-void ProcessArgs(int argc, char **argv, vector<MyPoint_2>& inputListVec)
-{
-    const char *const short_opts = "i:o:h";
-    const option long_opts[] = {
-        {"inputList", required_argument, nullptr, 'i'},
-        {"order", required_argument, nullptr, 'o'},        
-        {"help", no_argument, nullptr, 'h'},
-        {nullptr, no_argument, nullptr, 0}};
-
-    //note: string(optarg) is to take in and make a string
-    while (true)
+    void PrintHelp()
     {
-        const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
+        ostringstream msg;
+        msg << "--inputList (-i) <string s = [[x,y],[u,v],...]>: Calculate the VD of these points\n"
+            "--order (-o) <int k>: Calculate the k'th-order VD (defaults to " << DEFAULT_ORDER << ")\n"
+            "--help (-h):              Show help\n";
 
-        if (-1 == opt)
-            break;
+        cout << msg.str();
+        exit(1);
+    }
 
-        switch (opt)
+    int order = DEFAULT_ORDER;
+    string inputListString = "";
+    vector< pair<size_t, size_t> > segmentEndPtsVec;
+
+    //https://codeyarns.com/2015/01/30/how-to-parse-program-options-in-c-using-getopt_long/
+    void ProcessArgs(int argc, char **argv, vector<MyPoint_2>& inputListVec)
+    {
+        const char *const short_opts = "i:o:h";
+        const option long_opts[] = {
+            {"inputList", required_argument, nullptr, 'i'},
+            {"order", required_argument, nullptr, 'o'},        
+            {"help", no_argument, nullptr, 'h'},
+            {nullptr, no_argument, nullptr, 0}};
+
+        //note: string(optarg) is to take in and make a string
+        while (true)
         {
-        case 'o':
-            if (optarg)
+            const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
+
+            if (-1 == opt)
+                break;
+
+            switch (opt)
             {
-                try
+            case 'o':
+                if (optarg)
                 {
-                    int temp = stoi(optarg);
-                    if (temp > 0)
+                    try
                     {
-                        order = temp;
-                    } else 
+                        int temp = stoi(optarg);
+                        if (temp > 0)
+                        {
+                            order = temp;
+                        } else 
+                        {
+                            cerr << "Invalid order. Using default of " << DEFAULT_ORDER << endl;
+                        }
+                    }
+                    catch (...)
                     {
+                        order = DEFAULT_ORDER;
                         cerr << "Invalid order. Using default of " << DEFAULT_ORDER << endl;
                     }
                 }
-                catch (...)
+                break;
+
+            case 'i':
+                if(optarg)
                 {
-                    order = DEFAULT_ORDER;
-                    cerr << "Invalid order. Using default of " << DEFAULT_ORDER << endl;
+                    inputListString = string(optarg);
+                    Utility_Functions::extractPointsFromJSON2DArrayString(inputListString, inputListVec);              
                 }
-            }
-            break;
+                break;
 
-        case 'i':
-            if(optarg)
-            {
-                inputListString = string(optarg);
-                Vasco_Rossi::extractPointsFromJSON2DArrayString(inputListString, inputListVec);              
+            case 'h': // -h or --help
+            case '?': // Unrecognized option
+            default:
+                PrintHelp();
+                break;
             }
-            break;
-
-        case 'h': // -h or --help
-        case '?': // Unrecognized option
-        default:
-            PrintHelp();
-            break;
         }
-    }
-    return;
-}
-
-  template <class T,class output_iterator>
-    bool cast_into_seg(const T& obj,const MyKernel::Iso_rectangle_2& bbox,output_iterator out_it) 
-    {
-      CGAL::Object obj_cgal = CGAL::intersection(obj,bbox);
-      MySegment_2 s;
-      bool ret=CGAL::assign(s, obj_cgal);
-      if (ret) *out_it++=s;
-      return ret;
+        return;
     }
 
-//Convert infinite objects into drawable segments
-    template<class iterator,class output_iterator>
-    void cast_into_seg(const iterator first,const iterator end,
-                  const MyKernel::Iso_rectangle_2& bbox, output_iterator out_it)
-    {
-      for (iterator it=first; it!=end; ++it)
-      {
-        cast_into_seg(*it,bbox,out_it);
-      }
-    }
-
-void build_dual_(Voronoi_from_tri& v_recup,const MyKernel::Iso_rectangle_2& bbox, vector< MyPoint_2 >& endpointsVec)
-    {
-      vector<MySegment_2> seg_cont;
-      //filter degenerate segments
-      for(typename list<MySegment_2>::iterator iteS = v_recup.seg_list.begin(); iteS!=v_recup.seg_list.end();){
-        typename list<MySegment_2>::iterator itc=iteS++;
-        if (itc->is_degenerate())
+    template <class T,class output_iterator>
+        bool cast_into_seg(const T& obj,const MyKernel::Iso_rectangle_2& bbox,output_iterator out_it) 
         {
-          v_recup.seg_list.erase(itc);
+        CGAL::Object obj_cgal = CGAL::intersection(obj,bbox);
+        MySegment_2 s;
+        bool ret=CGAL::assign(s, obj_cgal);
+        if (ret) *out_it++=s;
+        return ret;
         }
-      }
-      
-      cast_into_seg(v_recup.ray_list.begin(),v_recup.ray_list.end(),bbox,std::back_inserter(seg_cont));//cast rays into segments in bbox
-      cast_into_seg(v_recup.line_list.begin(),v_recup.line_list.end(),bbox,std::back_inserter(seg_cont));//cast lines into segments in bbox
-      cast_into_seg(v_recup.seg_list.begin(),v_recup.seg_list.end(),bbox,std::back_inserter(seg_cont));//cast lines into segments in bbox
-      Vasco_Rossi::insertSegmentEndpointsIntoPointSet(seg_cont, endpointsVec, segmentEndPtsVec);
-    }
 
-template<class Triangulation>
-void build_dual_edge_list(Triangulation& T,const MyKernel::Iso_rectangle_2& bbox, vector< MyPoint_2 >& endpointsVec)
-    {
-    //~ template<class GT,class TDS>
-    //~ void draw_dual_in_ipe(const CGAL::Triangulation_2<GT,TDS>& T,const Iso_rectangle_2& bbox) const{
-      Voronoi_from_tri v_recup;
-      T.draw_dual(v_recup);
-      build_dual_(v_recup,bbox, endpointsVec);
-    }
+    //Convert infinite objects into drawable segments
+        template<class iterator,class output_iterator>
+        void cast_into_seg(const iterator first,const iterator end,
+                    const MyKernel::Iso_rectangle_2& bbox, output_iterator out_it)
+        {
+        for (iterator it=first; it!=end; ++it)
+        {
+            cast_into_seg(*it,bbox,out_it);
+        }
+        }
+
+    void build_dual_(Voronoi_from_tri& v_recup,const MyKernel::Iso_rectangle_2& bbox, vector< MyPoint_2 >& endpointsVec)
+        {
+        vector<MySegment_2> seg_cont;
+        //filter degenerate segments
+        for(typename list<MySegment_2>::iterator iteS = v_recup.seg_list.begin(); iteS!=v_recup.seg_list.end();){
+            typename list<MySegment_2>::iterator itc=iteS++;
+            if (itc->is_degenerate())
+            {
+            v_recup.seg_list.erase(itc);
+            }
+        }
+        
+        cast_into_seg(v_recup.ray_list.begin(),v_recup.ray_list.end(),bbox,std::back_inserter(seg_cont));//cast rays into segments in bbox
+        cast_into_seg(v_recup.line_list.begin(),v_recup.line_list.end(),bbox,std::back_inserter(seg_cont));//cast lines into segments in bbox
+        cast_into_seg(v_recup.seg_list.begin(),v_recup.seg_list.end(),bbox,std::back_inserter(seg_cont));//cast lines into segments in bbox
+        Utility_Functions::insertSegmentEndpointsIntoPointSet(seg_cont, endpointsVec, segmentEndPtsVec);
+        }
+
+    template<class Triangulation>
+    void build_dual_edge_list(Triangulation& T,const MyKernel::Iso_rectangle_2& bbox, vector< MyPoint_2 >& endpointsVec)
+        {
+        //~ template<class GT,class TDS>
+        //~ void draw_dual_in_ipe(const CGAL::Triangulation_2<GT,TDS>& T,const Iso_rectangle_2& bbox) const{
+        Voronoi_from_tri v_recup;
+        T.draw_dual(v_recup);
+        build_dual_(v_recup,bbox, endpointsVec);
+        }
+
+} // namespace okvd
+
+
+using namespace okvd;
 
 int main(int argc, char **argv)
 {
@@ -194,7 +201,7 @@ int main(int argc, char **argv)
 
     size_t numInPoints = inputListVec.size();
 
-    MyKernel::Iso_rectangle_2 bbox = Vasco_Rossi::computeBBox(inputListVec);
+    MyKernel::Iso_rectangle_2 bbox = Utility_Functions::computeBBox(inputListVec);
 
     MyDelaunay dt;
     MyRegularI rti;

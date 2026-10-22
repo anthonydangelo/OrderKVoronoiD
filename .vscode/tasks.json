@@ -30,6 +30,9 @@
                 "kind": "build",
                 "isDefault": true
             },
+            "presentation": {
+                "clear": true
+            },
             "problemMatcher":"$gcc"            
         },
         {
@@ -56,6 +59,9 @@
 //                 ,"-DCGAL_USE_GMP", "-DCGAL_USE_MPFR"
             ],
             "group": "build",
+            "presentation": {
+                "clear": true
+            },
             "problemMatcher":"$gcc"            
         }        
     ]

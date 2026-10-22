@@ -39,40 +39,6 @@
 #include <CGAL/enum.h>
 #include <CGAL/intersections.h>
 
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::vector;
-using std::string;
-using std::reference_wrapper;
-using std::ostringstream;
-using std::stoi;
-using std::list;
-using std::size_t;
-using std::exception;
-using std::pair;
-
-#define MY_LAZY_COMPS   (1)
-
-//https://doc.cgal.org/latest/Kernel_23/Kernel_23_2exact_8cpp-example.html#_a0
-//https://doc.cgal.org/latest/Kernel_23/Kernel_23_2intersection_visitor_8cpp-example.html#_a0
-//https://doc.cgal.org/latest/Kernel_d/group__PkgKernelDFunctions.html#ga0aa3e8b6bdf1bff509f8e2672ef194d1
-//https://doc.cgal.org/latest/Cone_spanners_2/index.html
-//typedef Exact_predicates_exact_constructions_kernel Kernel;
-#if (MY_LAZY_COMPS)
-    typedef CGAL::Lazy_exact_nt<CORE::Expr> Lazy_FT;
-    typedef CGAL::Simple_cartesian< Lazy_FT >  MyKernel;
-#else
-    typedef CGAL::Exact_predicates_exact_constructions_kernel_with_root_of      MyKernel;
-#endif
-//https://doc.cgal.org/latest/Arrangement_on_surface_2/index.html
-typedef MyKernel::FT                                                        My_Number_type;
-
-typedef MyKernel::Point_2                                                 MyPoint_2;
-typedef MyKernel::Segment_2                                               MySegment_2;
-typedef MyKernel::Line_2                                                  MyLine_2;
-typedef MyKernel::Intersect_2                                             MyIntersect_2;
-typedef MyKernel::Direction_2                                             MyDirection_2;
 
 //CGAL-4.11.2/demo/CGAL_ipelets/multi_delaunay.cpp
 
@@ -82,29 +48,9 @@ typedef MyKernel::Direction_2                                             MyDire
 #include <CGAL/Regular_triangulation_vertex_base_2.h>
 #include <CGAL/Regular_triangulation_2.h>
 
-typedef CGAL::Delaunay_triangulation_2<MyKernel>                                        MyDelaunay;
-typedef CGAL::Regular_triangulation_vertex_base_2<MyKernel>                             MyVb;
-typedef CGAL::Triangulation_vertex_base_with_info_2< vector<MyPoint_2>, MyKernel, MyVb> MyVbI;
-typedef CGAL::Regular_triangulation_face_base_2<MyKernel>                               MyFb;
-typedef CGAL::Triangulation_data_structure_2<MyVbI, MyFb>                               MyTds;
-typedef CGAL::Regular_triangulation_2<MyKernel, MyTds>                                  MyRegularI;
-typedef CGAL::Regular_triangulation_2<MyKernel>                                         MyRegularTriangulation;
-typedef MyRegularI::Vertex_handle                                                       MyVertexI;
-typedef typename CGAL::Weighted_point_2<MyKernel>                                       MyWeighted_point_2;
-typedef MyKernel::Ray_2                                                                 MyRay_2;
-typedef MyKernel::Segment_2                                                             MySegment_2;
-typedef MyKernel::Line_2                                                                MyLine_2;
 
-typedef struct Voronoi_from_tri
-{ //Class using stream to get the voronoi diagram
-    list<MyRay_2> ray_list;
-    list<MyLine_2> line_list;
-    list<MySegment_2> seg_list;
 
-    void operator<<(const MyRay_2 &p) { ray_list.push_back(p); }
-    void operator<<(const MyLine_2 &p) { line_list.push_back(p); }
-    void operator<<(const MySegment_2 &p) { seg_list.push_back(p); }
-} Voronoi_from_tri;
+#define MY_LAZY_COMPS   (1)
 
 //http://man7.org/linux/man-pages/man7/sem_overview.7.html
 #define SEMAPHORE_NAME ("/ONE_ST_TREE_SEMAPHORE")
@@ -130,54 +76,122 @@ typedef struct Voronoi_from_tri
 #define DOUBLE_EPSILON (0.000001)
 
 
+namespace okvd 
+{
+
+    using std::cout;
+    using std::cerr;
+    using std::endl;
+    using std::vector;
+    using std::string;
+    using std::reference_wrapper;
+    using std::ostringstream;
+    using std::stoi;
+    using std::list;
+    using std::size_t;
+    using std::exception;
+    using std::pair;
+
+//https://doc.cgal.org/latest/Kernel_23/Kernel_23_2exact_8cpp-example.html#_a0
+//https://doc.cgal.org/latest/Kernel_23/Kernel_23_2intersection_visitor_8cpp-example.html#_a0
+//https://doc.cgal.org/latest/Kernel_d/group__PkgKernelDFunctions.html#ga0aa3e8b6bdf1bff509f8e2672ef194d1
+//https://doc.cgal.org/latest/Cone_spanners_2/index.html
+//typedef Exact_predicates_exact_constructions_kernel Kernel;
+#   if (MY_LAZY_COMPS)
+        typedef CGAL::Lazy_exact_nt<CORE::Expr> Lazy_FT;
+        typedef CGAL::Simple_cartesian< Lazy_FT >  MyKernel;
+#   else
+        typedef CGAL::Exact_predicates_exact_constructions_kernel_with_root_of      MyKernel;
+#   endif
+//https://doc.cgal.org/latest/Arrangement_on_surface_2/index.html
+    typedef MyKernel::FT                                                        My_Number_type;
+
+    typedef MyKernel::Point_2                                                 MyPoint_2;
+    typedef MyKernel::Segment_2                                               MySegment_2;
+    typedef MyKernel::Line_2                                                  MyLine_2;
+    typedef MyKernel::Intersect_2                                             MyIntersect_2;
+    typedef MyKernel::Direction_2                                             MyDirection_2;
+
+//  CGAL-4.11.2/demo/CGAL_ipelets/multi_delaunay.cpp
+    typedef CGAL::Delaunay_triangulation_2<MyKernel>                                        MyDelaunay;
+    typedef CGAL::Regular_triangulation_vertex_base_2<MyKernel>                             MyVb;
+    typedef CGAL::Triangulation_vertex_base_with_info_2< vector<MyPoint_2>, MyKernel, MyVb> MyVbI;
+    typedef CGAL::Regular_triangulation_face_base_2<MyKernel>                               MyFb;
+    typedef CGAL::Triangulation_data_structure_2<MyVbI, MyFb>                               MyTds;
+    typedef CGAL::Regular_triangulation_2<MyKernel, MyTds>                                  MyRegularI;
+    typedef CGAL::Regular_triangulation_2<MyKernel>                                         MyRegularTriangulation;
+    typedef MyRegularI::Vertex_handle                                                       MyVertexI;
+    typedef typename CGAL::Weighted_point_2<MyKernel>                                       MyWeighted_point_2;
+    typedef MyKernel::Ray_2                                                                 MyRay_2;
+    typedef MyKernel::Segment_2                                                             MySegment_2;
+    typedef MyKernel::Line_2                                                                MyLine_2;
+
+    typedef struct Voronoi_from_tri
+    { //Class using stream to get the voronoi diagram
+        list<MyRay_2> ray_list;
+        list<MyLine_2> line_list;
+        list<MySegment_2> seg_list;
+
+        void operator<<(const MyRay_2 &p) { ray_list.push_back(p); }
+        void operator<<(const MyLine_2 &p) { line_list.push_back(p); }
+        void operator<<(const MySegment_2 &p) { seg_list.push_back(p); }
+    } Voronoi_from_tri;
+
+
+
+
 /////////////////////
 // Namespaces for utilities and printing.
 
 /*
 **
-** Why namespace Vasco_Rossi? 
-** Apart from sounding like it could be the name of his next album,
-** it's just more interesting than "Utility_Functions". 
-** Plus, since it's likely that I'm the only one who's ever going
-** to see/use this, I can call it whatever I want as long as he doesn't mind. I hope he doesn't...
-** Plus I'm a fan.
 **
  */
-namespace Vasco_Rossi
-{
 
-    void extractPointsFromJSON2DArrayString(string &inputString, vector< MyPoint_2 >& result);
-
-    //Assume the numbers aren't too large or small for doubles
-    inline bool pointsAreTooClose(const MyPoint_2 &first, const MyPoint_2 &second)
+    namespace Utility_Functions
     {
-        return ( (fabs(CGAL::to_double(first.x()) - CGAL::to_double(second.x())) < DOUBLE_EPSILON) 
-                && (fabs(CGAL::to_double(first.y()) - CGAL::to_double(second.y())) < DOUBLE_EPSILON) );
-    }
 
-    //https://stackoverflow.com/questions/46485084/declare-template-function-to-accept-any-container-but-only-one-contained-type/46485265
-    template < template < class ... > class Container, class ... Args >
-    bool findPointIndex(const MyPoint_2 &pt, const Container< MyPoint_2, Args... >& myColl, size_t &myIndex)
-    {
-        myIndex = 0;
-        if(!myColl.empty()){
-            auto endIt = end(myColl);
-            for (auto it = begin(myColl); it != endIt; ++it, ++myIndex) {
-                if(pointsAreTooClose(*it, pt)){
-                    return true;
-                }
-            }    
+        void extractPointsFromJSON2DArrayString(string &inputString, vector< MyPoint_2 >& result);
+
+        //Assume the numbers aren't too large or small for doubles
+        inline bool pointsAreTooClose(const MyPoint_2 &first, const MyPoint_2 &second)
+        {
+            return ( (fabs(CGAL::to_double(first.x()) - CGAL::to_double(second.x())) < DOUBLE_EPSILON) 
+                    && (fabs(CGAL::to_double(first.y()) - CGAL::to_double(second.y())) < DOUBLE_EPSILON) );
         }
-        return false;
-    }
 
-    void insertSegmentEndpointsIntoPointSet(const vector<MySegment_2>& segmentList, 
-                                            vector< MyPoint_2 >& endpointsVec,
-                                            vector< pair<size_t, size_t> >& segmentEndPtsVec);  
 
-    MyKernel::Iso_rectangle_2 computeBBox(const vector<MyPoint_2>& inputListVec);
+        /*
+        ** according to "the machine":
+        ** A function template (as opposed to a full specialization) is already allowed to have identical definitions 
+        ** in multiple translation units — that's the template ODR (ODR = One Definition Rule) rule. 
+        ** inline adds nothing here.
+        ** You'd only need inline if this were a full specialization (e.g. template<> bool findPointIndex<...>(...)), 
+        ** where it's a regular function again and the normal one-definition rule applies.
+        */
+        //https://stackoverflow.com/questions/46485084/declare-template-function-to-accept-any-container-but-only-one-contained-type/46485265
+        template < template < class ... > class Container, class ... Args >
+        bool findPointIndex(const MyPoint_2 &pt, const Container< MyPoint_2, Args... >& myColl, size_t &myIndex)
+        {
+            myIndex = 0;
+            if(!myColl.empty()){
+                auto endIt = end(myColl);
+                for (auto it = begin(myColl); it != endIt; ++it, ++myIndex) {
+                    if(pointsAreTooClose(*it, pt)){
+                        return true;
+                    }
+                }    
+            }
+            return false;
+        }
 
-} // namespace Vasco_Rossi
+        void insertSegmentEndpointsIntoPointSet(const vector<MySegment_2>& segmentList, 
+                                                vector< MyPoint_2 >& endpointsVec,
+                                                vector< pair<size_t, size_t> >& segmentEndPtsVec);  
+
+        MyKernel::Iso_rectangle_2 computeBBox(const vector<MyPoint_2>& inputListVec);
+
+    } // namespace Utility_Functions
 
 
 /*
@@ -192,40 +206,40 @@ namespace Vasco_Rossi
 ** Plus, I'm a fan.
 **
  */
-namespace Marisa_Tomei
-{
-    inline string wrapStringInQuotes(const string &s)
+    namespace Marisa_Tomei
     {
-        return ("\"" + s + "\"");
-    }
-
-    inline string point2ToJSON(const MyPoint_2 &p)
-    {
-        ostringstream sStream;
-
-        sStream << "{\"x\":\"" << p.x() << "\", "
-                << "\"y\":\"" << p.y() << "\"}";
-        return sStream.str();
-    } 
-
-    inline string insertTabs(int level)
-    {
-        ostringstream sStream;
-        for (int i = 0; i < level; ++i)
+        inline string wrapStringInQuotes(const string &s)
         {
-            sStream << "\t";
+            return ("\"" + s + "\"");
         }
-        return sStream.str();
-    }
 
-    string pointVectorToJSONString(string name, const vector< MyPoint_2 >& myColl, int tabLevel = 0);
+        inline string point2ToJSON(const MyPoint_2 &p)
+        {
+            ostringstream sStream;
 
-    string segmentsIndicesToJSONString(string name, const vector< pair<size_t, size_t> >& segmentList, int tabLevel = 0);
+            sStream << "{\"x\":\"" << p.x() << "\", "
+                    << "\"y\":\"" << p.y() << "\"}";
+            return sStream.str();
+        } 
 
-    string voronoiDiagramToJSONString(const vector< MyPoint_2 >& endpointsVec, 
-                                        const vector< pair<size_t, size_t> >& segmentEndPtsVec, 
-                                        int tabLevel = 0);
-   
-} // namespace Marisa_Tomei
+        inline string insertTabs(int level)
+        {
+            ostringstream sStream;
+            for (int i = 0; i < level; ++i)
+            {
+                sStream << "\t";
+            }
+            return sStream.str();
+        }
 
+        string pointVectorToJSONString(string name, const vector< MyPoint_2 >& myColl, int tabLevel = 0);
+
+        string segmentsIndicesToJSONString(string name, const vector< pair<size_t, size_t> >& segmentList, int tabLevel = 0);
+
+        string voronoiDiagramToJSONString(const vector< MyPoint_2 >& endpointsVec, 
+                                            const vector< pair<size_t, size_t> >& segmentEndPtsVec, 
+                                            int tabLevel = 0);
+    
+    } // namespace Marisa_Tomei
+} // namespace okvd
 #endif
