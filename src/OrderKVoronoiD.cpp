@@ -52,6 +52,9 @@ using namespace okvd;
 
 namespace  
 {
+
+    using std::stoi;
+
     void PrintHelp()
     {
         ostringstream msg;

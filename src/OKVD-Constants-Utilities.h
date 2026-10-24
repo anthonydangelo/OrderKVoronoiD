@@ -84,12 +84,9 @@ namespace okvd
     using std::endl;
     using std::vector;
     using std::string;
-    using std::reference_wrapper;
     using std::ostringstream;
-    using std::stoi;
     using std::list;
     using std::size_t;
-    using std::exception;
     using std::pair;
 
 //https://doc.cgal.org/latest/Kernel_23/Kernel_23_2exact_8cpp-example.html#_a0
