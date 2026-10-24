@@ -1,8 +1,10 @@
 //============================================================================
 // Name        : OrderKVoronoiD.cpp
-// Author      : Anthony D'Angelo (re-worked CGAL demo),
-//                 // Author(s)     : Sebastien Loriot, Sylvain Pion
-//                 // Author(s)     : Sebastien Loriot, Nicolas Carrez
+// Author(s)   :- Sebastien Loriot, Sylvain Pion
+//              - Sebastien Loriot, Nicolas Carrez
+//              - Anthony D'Angelo (re-worked CGAL demo to output 
+//                                  a json object of the OKVD arrangement 
+//                                  clipped by a bounding box),
 // Version     :
 // Copyright   : From the CGAL demos:
 /*
@@ -45,24 +47,25 @@
 #include <semaphore.h>
 #include <errno.h>
 
-namespace okvd 
+
+using namespace okvd;
+
+namespace  
 {
     void PrintHelp()
     {
         ostringstream msg;
-        msg << "--inputList (-i) <string s = \"[[x,y],[u,v],...]\">: Calculate the VD of these points (need quotes)\n"
-            "--order (-o) <int k>: Calculate the k'th-order VD (defaults to " << DEFAULT_ORDER << ")\n"
+        msg << "--inputList (-i) <string s = \"[[x,y],[u,v],...]\">: Calculate the VD of these 'n' points (need quotes around list)\n"
+            "--order (-o) <int k>: Calculate the k'th-order VD for 1 <= k < n (defaults to " << DEFAULT_ORDER << ")\n"
             "--help (-h):              Show help\n";
 
         cout << msg.str();
     }
 
-    int order = DEFAULT_ORDER;
-    string inputListString = "";
-    vector< pair<size_t, size_t> > segmentEndPtsVec;
+    
 
     //https://codeyarns.com/2015/01/30/how-to-parse-program-options-in-c-using-getopt_long/
-    bool ProcessArgs(int argc, char **argv, vector<MyPoint_2>& inputListVec)
+    bool ProcessArgs(int argc, char **argv, int &vdOrder, vector<MyPoint_2> &pointsVec)
     {
         const char *const short_opts = "i:o:h";
         const option long_opts[] = {
@@ -70,6 +73,7 @@ namespace okvd
             {"order", required_argument, nullptr, 'o'},        
             {"help", no_argument, nullptr, 'h'},
             {nullptr, no_argument, nullptr, 0}};
+        string inPointsString = "";
 
         //note: string(optarg) is to take in and make a string
         while (true)
@@ -91,7 +95,7 @@ namespace okvd
                         int temp = stoi(optarg);
                         if (temp > 0)
                         {
-                            order = temp;
+                            vdOrder = temp;
                         } else 
                         {
                             cerr << "Invalid order. Using default of " << DEFAULT_ORDER << endl;
@@ -99,7 +103,7 @@ namespace okvd
                     }
                     catch (...)
                     {
-                        order = DEFAULT_ORDER;
+                        vdOrder = DEFAULT_ORDER;
                         cerr << "Invalid order. Using default of " << DEFAULT_ORDER << endl;
                     }
                 }
@@ -108,8 +112,8 @@ namespace okvd
             case 'i':
                 if(optarg)
                 {
-                    inputListString = string(optarg);
-                    Utility_Functions::extractPointsFromJSON2DArrayString(inputListString, inputListVec);              
+                    inPointsString = string(optarg);
+                    Utility_Functions::extractPointsFromJSON2DArrayString(inPointsString, pointsVec);              
                 }
                 break;
 
@@ -123,9 +127,9 @@ namespace okvd
     }
 
     template <class T,class output_iterator>
-    bool cast_into_seg(const T& obj,const MyKernel::Iso_rectangle_2& bbox,output_iterator out_it) 
+    bool cast_into_seg(const T &obj, const MyKernel::Iso_rectangle_2 &bbox, output_iterator out_it) 
     {
-        CGAL::Object obj_cgal = CGAL::intersection(obj,bbox);
+        CGAL::Object obj_cgal = CGAL::intersection(obj, bbox);
         MySegment_2 s;
         bool ret=CGAL::assign(s, obj_cgal);
         if (ret) 
@@ -138,8 +142,8 @@ namespace okvd
 
     //Convert infinite objects into drawable segments
     template<class iterator,class output_iterator>
-    void cast_into_seg(const iterator first,const iterator end,
-                    const MyKernel::Iso_rectangle_2& bbox, output_iterator out_it)
+    void cast_into_seg(const iterator first, const iterator end,
+                    const MyKernel::Iso_rectangle_2 &bbox, output_iterator out_it)
     {
         for (iterator it=first; it!=end; ++it)
         {
@@ -147,7 +151,9 @@ namespace okvd
         }
     }
 
-    void build_dual_(Voronoi_from_tri& v_recup,const MyKernel::Iso_rectangle_2& bbox, vector< MyPoint_2 >& endpointsVec)
+    void build_dual_(Voronoi_from_tri &v_recup, const MyKernel::Iso_rectangle_2 &bbox, 
+                    vector< MyPoint_2 > &endpointsVec,
+                    vector< pair<size_t, size_t> > &segmentEndPtsVec)
     {
         vector<MySegment_2> seg_cont;
         //filter degenerate segments
@@ -167,28 +173,29 @@ namespace okvd
     }
 
     template<class Triangulation>
-    void build_dual_edge_list(Triangulation& T,const MyKernel::Iso_rectangle_2& bbox, vector< MyPoint_2 >& endpointsVec)
+    void build_dual_edge_list(Triangulation &T, const MyKernel::Iso_rectangle_2 &bbox, 
+                                vector< MyPoint_2 > &endpointsVec, vector< pair<size_t, size_t> > &segmentEndPtsVec)
     {
         //~ template<class GT,class TDS>
         //~ void draw_dual_in_ipe(const CGAL::Triangulation_2<GT,TDS>& T,const Iso_rectangle_2& bbox) const{
         Voronoi_from_tri v_recup;
         T.draw_dual(v_recup);
-        build_dual_(v_recup,bbox, endpointsVec);
+        build_dual_(v_recup,bbox, endpointsVec, segmentEndPtsVec);
     }
 
-} // namespace okvd
+} // anonymous namespace
 
-
-using namespace okvd;
 
 int main(int argc, char **argv)
 {
 
     vector<MyPoint_2> inputListVec;
     vector< MyPoint_2 > endpointsVec;
+    int order = DEFAULT_ORDER;
+    vector< pair<size_t, size_t> > segmentEndPtsVec;
 
     if ( (1 == argc)
-        || !ProcessArgs(argc, argv, inputListVec) 
+        || !ProcessArgs(argc, argv, order, inputListVec) 
         || inputListVec.empty()
         || order < 1    // order is defaulted or set in ProcessArgs
         || order >= inputListVec.size()) 
@@ -237,7 +244,8 @@ int main(int argc, char **argv)
         }
 
         if (3 == order)
-        { //Pour l'order 3
+        { 
+            //Pour l'order 3
             //CAN WE ITERATE OVER DELAUNEY TRIANGLES???
             //WE MAY COUNT SEVERAL TIME SAME TRIANGLE WITH THE FOLLOWING METHOD
             //iterate over adjacent point in the regular triangulation and compute a new wpoint for those having one commun parent from delaunay
@@ -303,15 +311,15 @@ int main(int argc, char **argv)
 
     if (1 == order)
     {
-        build_dual_edge_list(dt,bbox, endpointsVec);
+        build_dual_edge_list(dt,bbox, endpointsVec, segmentEndPtsVec);
     } 
     else if (2 == order)
     {
-        build_dual_edge_list(rti,bbox, endpointsVec);
+        build_dual_edge_list(rti,bbox, endpointsVec, segmentEndPtsVec);
     }
     else 
     {
-        build_dual_edge_list(rt,bbox, endpointsVec);
+        build_dual_edge_list(rt,bbox, endpointsVec, segmentEndPtsVec);
     }
 
     ostringstream sStream;
@@ -335,6 +343,7 @@ int main(int argc, char **argv)
     std::chrono::duration<double> elapsed = finish - start;
     double timeInSecs = elapsed.count();
     long timeNumb = static_cast<long>(floor(timeInSecs));
+
     sStream << "\"s\":\"" << (timeNumb % 60) << "\", \"m\":\"";
     timeNumb /= 60;
     sStream << (timeNumb % 60) << "\", \"h\":\""; 

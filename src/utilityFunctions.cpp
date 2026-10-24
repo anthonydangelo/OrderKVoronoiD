@@ -9,7 +9,7 @@ namespace okvd
     namespace Utility_Functions
     {
 
-        void extractPointsFromJSON2DArrayString(string &inputString, vector< MyPoint_2 >& result)
+        void extractPointsFromJSON2DArrayString(string &inputString, vector< MyPoint_2 > &result)
         {
             //I'd like to use a regex here, but I don't know how to write the grammar...
             //http://www.cplusplus.com/reference/string/string/find_first_of/
@@ -45,9 +45,9 @@ namespace okvd
         }   
 
         
-        void insertSegmentEndpointsIntoPointSet(const vector<MySegment_2>& segmentList, 
-                                                vector< MyPoint_2 >& endpointsVec,
-                                                vector< pair<size_t, size_t> >& segmentEndPtsVec)
+        void insertSegmentEndpointsIntoPointSet(const vector<MySegment_2> &segmentList, 
+                                                vector< MyPoint_2 > &endpointsVec,
+                                                vector< pair<size_t, size_t> > &segmentEndPtsVec)
         {
             for(auto it = segmentList.begin(); it != segmentList.end(); ++it)
             {
@@ -70,7 +70,7 @@ namespace okvd
             return;
         }    
 
-        MyKernel::Iso_rectangle_2 computeBBox(const vector<MyPoint_2>& inputListVec)
+        MyKernel::Iso_rectangle_2 computeBBox(const vector<MyPoint_2> &inputListVec)
         {
             double maxX = std::numeric_limits<double>::min();
             double maxY = std::numeric_limits<double>::min();

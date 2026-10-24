@@ -151,7 +151,7 @@ namespace okvd
     namespace Utility_Functions
     {
 
-        void extractPointsFromJSON2DArrayString(string &inputString, vector< MyPoint_2 >& result);
+        void extractPointsFromJSON2DArrayString(string &inputString, vector< MyPoint_2 > &result);
 
         //Assume the numbers aren't too large or small for doubles
         inline bool pointsAreTooClose(const MyPoint_2 &first, const MyPoint_2 &second)
@@ -171,7 +171,7 @@ namespace okvd
         */
         //https://stackoverflow.com/questions/46485084/declare-template-function-to-accept-any-container-but-only-one-contained-type/46485265
         template < template < class ... > class Container, class ... Args >
-        bool findPointIndex(const MyPoint_2 &pt, const Container< MyPoint_2, Args... >& myColl, size_t &myIndex)
+        bool findPointIndex(const MyPoint_2 &pt, const Container< MyPoint_2, Args... > &myColl, size_t &myIndex)
         {
             myIndex = 0;
             if(!myColl.empty()){
@@ -185,11 +185,11 @@ namespace okvd
             return false;
         }
 
-        void insertSegmentEndpointsIntoPointSet(const vector<MySegment_2>& segmentList, 
-                                                vector< MyPoint_2 >& endpointsVec,
-                                                vector< pair<size_t, size_t> >& segmentEndPtsVec);  
+        void insertSegmentEndpointsIntoPointSet(const vector<MySegment_2> &segmentList, 
+                                                vector< MyPoint_2 > &endpointsVec,
+                                                vector< pair<size_t, size_t> > &segmentEndPtsVec);  
 
-        MyKernel::Iso_rectangle_2 computeBBox(const vector<MyPoint_2>& inputListVec);
+        MyKernel::Iso_rectangle_2 computeBBox(const vector<MyPoint_2> &inputListVec);
 
     } // namespace Utility_Functions
 
@@ -224,12 +224,12 @@ namespace okvd
             return sStream.str();
         }
 
-        string pointVectorToJSONString(string name, const vector< MyPoint_2 >& myColl, int tabLevel = 0);
+        string pointVectorToJSONString(string name, const vector< MyPoint_2 > &myColl, int tabLevel = 0);
 
-        string segmentsIndicesToJSONString(string name, const vector< pair<size_t, size_t> >& segmentList, int tabLevel = 0);
+        string segmentsIndicesToJSONString(string name, const vector< pair<size_t, size_t> > &segmentList, int tabLevel = 0);
 
-        string voronoiDiagramToJSONString(const vector< MyPoint_2 >& endpointsVec, 
-                                            const vector< pair<size_t, size_t> >& segmentEndPtsVec, 
+        string voronoiDiagramToJSONString(const vector< MyPoint_2 > &endpointsVec, 
+                                            const vector< pair<size_t, size_t> > &segmentEndPtsVec, 
                                             int tabLevel = 0);
     
     } // namespace Pretty_Print

@@ -58,7 +58,9 @@
 //                 ,"-DCGAL_DONT_USE_LAZY_KERNEL=1", "-DCGAL_USE_GMP=1"
 //                 ,"-DCGAL_USE_GMP", "-DCGAL_USE_MPFR"
             ],
-            "group": "build",
+            "group": {
+                "kind" : "build"
+            },
             "presentation": {
                 "clear": true
             },

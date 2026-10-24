@@ -8,7 +8,7 @@ namespace okvd
  */
     namespace Pretty_Print
     {
-        string pointVectorToJSONString(string name, const vector< MyPoint_2 >& myColl, int tabLevel)
+        string pointVectorToJSONString(string name, const vector< MyPoint_2 > &myColl, int tabLevel)
         {
             ostringstream sStream;
             sStream << insertTabs(tabLevel);
@@ -32,7 +32,7 @@ namespace okvd
             return sStream.str();
         }
 
-        string segmentsIndicesToJSONString(string name, const vector< pair<size_t, size_t> >& segmentList, int tabLevel)
+        string segmentsIndicesToJSONString(string name, const vector< pair<size_t, size_t> > &segmentList, int tabLevel)
         {
 
             ostringstream sStream;
@@ -60,8 +60,8 @@ namespace okvd
             return sStream.str();
         }    
 
-        string voronoiDiagramToJSONString(const vector< MyPoint_2 >& endpointsVec, 
-                                            const vector< pair<size_t, size_t> >& segmentEndPtsVec, 
+        string voronoiDiagramToJSONString(const vector< MyPoint_2 > &endpointsVec, 
+                                            const vector< pair<size_t, size_t> > &segmentEndPtsVec, 
                                             int tabLevel)
         {
             ostringstream sStream;
