@@ -148,7 +148,7 @@ namespace okvd
     namespace Utility_Functions
     {
 
-        void extractPointsFromJSON2DArrayString(string &inputString, vector< MyPoint_2 > &result);
+        bool extractPointsFromJSON2DArrayString(const string &inputString, vector< MyPoint_2 > &result);
 
         //Assume the numbers aren't too large or small for doubles
         inline bool pointsAreTooClose(const MyPoint_2 &first, const MyPoint_2 &second)

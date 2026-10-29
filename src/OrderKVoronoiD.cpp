@@ -58,11 +58,16 @@ namespace
     void PrintHelp()
     {
         ostringstream msg;
-        msg << "--inputList (-i) <string s = \"[[x,y],[u,v],...]\">: Calculate the VD of these 'n' points (need quotes around list)\n"
-            "--order (-o) <int k>: Calculate the k'th-order VD for 1 <= k < n (defaults to " << DEFAULT_ORDER << ")\n"
-            "--help (-h):              Show help\n";
+        msg << "\nOrderKVoronoiD / OrderKVoronoiD_d: Help\n"
+               "====================================================================================================================\n"
+               "--inputList (-i) < string s = \"[[x,y],[u,v],...]\">:   Calculate the VD of these 'n' points (need quotes around list)\n"
+               "--order     (-o) < int k >:                           Calculate the k'th-order VD for 1 <= k < n (defaults to " << DEFAULT_ORDER << ")\n"
+               "--help      (-h):                                     Show help\n"
+               "\ne.g., -o 2 -i \"[[1,0], [2,0], [3,0]]\"\n"
+               "You must pass in at least \"-i\" and a list of at least 2 points.";
 
         cout << msg.str();
+        return;
     }
 
     
@@ -101,13 +106,14 @@ namespace
                             vdOrder = temp;
                         } else 
                         {
-                            cerr << "Invalid order. Using default of " << DEFAULT_ORDER << endl;
+                            cerr << "ERROR: Invalid order. Using default of " << DEFAULT_ORDER << endl;
                         }
                     }
                     catch (...)
                     {
                         vdOrder = DEFAULT_ORDER;
-                        cerr << "Invalid order. Using default of " << DEFAULT_ORDER << endl;
+                        cerr << endl << "Exception caught" << endl;
+                        cerr << "ERROR: Invalid order. Trying to move forward with default of " << DEFAULT_ORDER << endl;
                     }
                 }
                 break;
@@ -116,7 +122,13 @@ namespace
                 if(optarg)
                 {
                     inPointsString = string(optarg);
-                    Utility_Functions::extractPointsFromJSON2DArrayString(inPointsString, pointsVec);              
+                    if ( !Utility_Functions::extractPointsFromJSON2DArrayString(inPointsString, pointsVec))
+                    {
+                        // malformed input point list. bounce back to user.
+                        // error message printed in function
+                        // pointsVec is returned empty
+                        return false;
+                    }
                 }
                 break;
 
@@ -203,7 +215,25 @@ int main(int argc, char **argv)
         || order < 1    // order is defaulted or set in ProcessArgs
         || order >= inputListVec.size()) 
     {        
+        cout << "\nThere was an error starting up the program. Review the following and ensure the inputs are legal." << endl;
         PrintHelp();
+        cout <<  endl << "You requested the order-" << order;
+        cout << " Voronoi diagram on the " << inputListVec.size() << " point(s): " << endl;
+        cout <<  "\"";
+        for(size_t ind = 0; ind < inputListVec.size(); ++ind)
+        {
+            MyPoint_2 p = inputListVec[ind];
+            cout << "( " << p.x() << ", " << p.y() << ") ";
+            if(ind < inputListVec.size() - 1)
+            {
+                cout << ", ";
+            }
+        }
+        cout << "\"" << endl;
+        if (order >= inputListVec.size())
+        {
+            cout << "\nFor 'n' input points, the order number must not exceed 'n-1'.\n\n";
+        }
         return 1;
     }
 
