@@ -39,12 +39,10 @@
 #include <chrono>  // for high_resolution_clock
 #include <limits> 
 
-//Posix semaphores
-//http://man7.org/linux/man-pages/man7/sem_overview.7.html
-//http://man7.org/linux/man-pages/man3/sem_open.3.html
 #include <fcntl.h>           /* For O_* constants */
 #include <sys/stat.h>        /* For mode constants */
-#include <semaphore.h>
+#include <unistd.h>
+#include <sys/file.h>
 #include <errno.h>
 
 
@@ -60,8 +58,10 @@ namespace
         ostringstream msg;
         msg << "\nOrderKVoronoiD / OrderKVoronoiD_d: Help\n"
                "====================================================================================================================\n"
-               "--inputList (-i) < string s = \"[[x,y],[u,v],...]\">:   Calculate the VD of these 'n' points (need quotes around list)\n"
+               "--input-list (-i) < string s = \"[[x,y],[u,v],...]\">:  Calculate the VD of these 'n' points (need quotes around list)\n"
                "--order     (-o) < int k >:                           Calculate the k'th-order VD for 1 <= k < n (defaults to " << DEFAULT_ORDER << ")\n"
+               "--no-mutex:                                           Do not use a resource mutex (currently a file lock with a blocking lock call).\n"
+               "                                                      This option is useful, e.g., if you want to manage the mutex in an invoking bash script.\n"
                "--help      (-h):                                     Show help\n"
                "\ne.g., -o 2 -i \"[[1,0], [2,0], [3,0]]\"\n"
                "You must pass in at least \"-i\" and a list of at least 2 points.";
@@ -73,12 +73,13 @@ namespace
     
 
     //https://codeyarns.com/2015/01/30/how-to-parse-program-options-in-c-using-getopt_long/
-    bool ProcessArgs(int argc, char **argv, int &vdOrder, vector<MyPoint_2> &pointsVec)
+    bool ProcessArgs(int argc, char **argv, int &vdOrder, vector<MyPoint_2> &pointsVec, bool &useMutex)
     {
         const char *const short_opts = "i:o:h";
         const option long_opts[] = {
-            {"inputList", required_argument, nullptr, 'i'},
+            {"input-list", required_argument, nullptr, 'i'},
             {"order", required_argument, nullptr, 'o'},        
+            {"no-mutex", no_argument, nullptr, 256},    // "Any value that won't collide with the short option chars. 256 is a common choice since it's outside the ASCII range."
             {"help", no_argument, nullptr, 'h'},
             {nullptr, no_argument, nullptr, 0}};
         string inPointsString = "";
@@ -130,6 +131,12 @@ namespace
                         return false;
                     }
                 }
+                break;
+
+            case 256:
+                // request to not to use a resource mutex in the program.
+                // this is useful if you want to manage a mutex in a bash script instead
+                useMutex = false;
                 break;
 
             case 'h': // -h or --help
@@ -204,13 +211,15 @@ namespace
 int main(int argc, char **argv)
 {
 
+    int mutexFD = -1;
+    bool useMutex = true;
     vector<MyPoint_2> inputListVec;
     vector< MyPoint_2 > endpointsVec;
     int order = DEFAULT_ORDER;
     vector< pair<size_t, size_t> > segmentEndPtsVec;
 
     if ( (1 == argc)
-        || !ProcessArgs(argc, argv, order, inputListVec) 
+        || !ProcessArgs(argc, argv, order, inputListVec, useMutex) 
         || inputListVec.empty()
         || order < 1    // order is defaulted or set in ProcessArgs
         || order >= inputListVec.size()) 
@@ -237,18 +246,24 @@ int main(int argc, char **argv)
         return 1;
     }
 
-
-    sem_t* pSem = sem_open(SEMAPHORE_NAME, O_CREAT, (S_IRWXU | S_IRWXG), SEMAPHORE_INIT_VALUE);
-
-    if (SEM_FAILED == pSem)
+    if(useMutex)
     {
-        perror("Failed to open a semaphore for OKVD problem");
-        return 1;
+        mutexFD = open(FLOCK_PATH, O_CREAT | O_RDWR, 0600);
+        if (mutexFD == -1) 
+        {
+            int err = errno;
+            cerr << "Failed to open the lock file \'" << FLOCK_PATH << "\' for the OKVD problem (used as a resource mutex): "
+                    << strerror(err) << " (" << err << ")\n";
+            return 1;
+        }
+
+        // N.B.: the non-blocking version returns -1 if in use -- flock(mutexFD, LOCK_EX | LOCK_NB) 
+        flock(mutexFD, LOCK_EX);
+        // Lock is released automatically:
+        // when you close(fd), when the process exits (even SIGKILL, even segfault)
     }
 
-    sem_wait(pSem);
-
-//https://www.pluralsight.com/blog/software-development/how-to-measure-execution-time-intervals-in-c--
+    //https://www.pluralsight.com/blog/software-development/how-to-measure-execution-time-intervals-in-c--
     // Record start time
     auto start = std::chrono::high_resolution_clock::now();
     
@@ -366,12 +381,11 @@ int main(int argc, char **argv)
     // Record end time
     auto finish = std::chrono::high_resolution_clock::now();
 
-    sem_post(pSem);
-    //http://man7.org/linux/man-pages/man3/sem_close.3.html
-    /*All open named semaphores are automatically closed on process
-       termination, or upon execve(2). 
-       Oh well. Do it anyway.*/
-    sem_close(pSem);
+    if(useMutex)
+    {
+        // Note: No unlock needed — flock is released automatically when fd is closed (end of scope) or the process dies.        
+        close(mutexFD);
+    }
 
     std::chrono::duration<double> elapsed = finish - start;
     double timeInSecs = elapsed.count();

@@ -52,9 +52,31 @@
 
 #define MY_LAZY_COMPS   (1)
 
-//http://man7.org/linux/man-pages/man7/sem_overview.7.html
-#define SEMAPHORE_NAME ("/ONE_ST_TREE_SEMAPHORE")
-#define SEMAPHORE_INIT_VALUE (1)
+
+// NOTE: 
+// We use a file lock as a resource mutex (a blocking lock call).
+// The lock file lives in /tmp, which is sticky + world-writable.
+// On modern kernels (>= 4.19, e.g. Ubuntu 20.10+), fs.protected_regular
+// blocks cross-user O_CREAT opens in such directories. If this program
+// is ever run by a different user than the one who created the lock file,
+// open() will fail with EACCES.
+//
+// Fix: move the lock file to a directory that is neither sticky nor
+// world-writable (e.g. a group-owned directory with mode 0770), or ensure
+// all invocations run as the same user.
+// Example:
+//
+//   sudo mkdir -p /var/lib/myapp-locks
+//   sudo groupadd myapp-group
+//   sudo usermod -aG myapp-group <web_server_user>
+//   sudo usermod -aG myapp-group <your_user>
+//   sudo chgrp myapp-group /var/lib/myapp-locks
+//   sudo chmod 0770 /var/lib/myapp-locks
+//
+// Then change the path in this file from "/tmp/myapp.lock" to
+// "/var/lib/myapp-locks/myapp.lock".   
+#define FLOCK_PATH ("/tmp/one-st-tree-mutex.lock")
+
 
 #define MY_VERBOSE (0)
 
