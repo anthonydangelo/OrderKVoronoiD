@@ -53,11 +53,29 @@ namespace
 
     using std::stoi;
 
+    struct OKVDResourceMutex {
+        //FLOCK mutex
+        int mutexFD = -1;
+        OKVDResourceMutex() = default;
+        ~OKVDResourceMutex() 
+        { 
+            if (mutexFD >= 0) 
+            {
+                close(mutexFD); 
+            }
+        }
+        OKVDResourceMutex(const OKVDResourceMutex&) = delete;
+        OKVDResourceMutex& operator=(const OKVDResourceMutex&) = delete;
+        OKVDResourceMutex(OKVDResourceMutex&&) = delete;
+        OKVDResourceMutex& operator=(OKVDResourceMutex&&) = delete;        
+    };
+
     struct OKVDConfig
     {
-        bool useMutex = true;
-        int order = DEFAULT_ORDER;
         vector<MyPoint_2> inputListVec;
+        int order = DEFAULT_ORDER;
+        OKVDResourceMutex flockMutex;
+        bool useMutex = true;
     };
 
     void PrintHelp()
@@ -186,6 +204,25 @@ namespace
             }
             exit(1);
         }
+
+        if(config.useMutex)
+        {
+            config.flockMutex.mutexFD = open(FLOCK_PATH, O_CREAT | O_RDWR, 0600);
+            if (config.flockMutex.mutexFD == -1) 
+            {
+                int err = errno;
+                cerr << "Failed to open the lock file \'" << FLOCK_PATH << "\' for the OKVD problem (used as a resource mutex): "
+                        << strerror(err) << " (" << err << ")\n";
+                exit(1);
+            }
+
+            // N.B.: the non-blocking version returns -1 if in use -- flock(mutexFD, LOCK_EX | LOCK_NB) 
+            flock(config.flockMutex.mutexFD, LOCK_EX);
+            // Lock is released automatically:
+            // when you close(fd), when the process exits (even SIGKILL, even segfault)
+            // for us, the destructor of the struct is called when it goes out of scope and calls close
+        }
+
         return;
     }
 
@@ -250,32 +287,12 @@ namespace
 
 
 int main(int argc, char **argv)
-{
-
-    int mutexFD = -1;
+{    
     OKVDConfig config;
     vector< MyPoint_2 > endpointsVec;
     vector< pair<size_t, size_t> > segmentEndPtsVec;
 
     initializeOrDie(argc, argv, config);
-
-
-    if(config.useMutex)
-    {
-        mutexFD = open(FLOCK_PATH, O_CREAT | O_RDWR, 0600);
-        if (mutexFD == -1) 
-        {
-            int err = errno;
-            cerr << "Failed to open the lock file \'" << FLOCK_PATH << "\' for the OKVD problem (used as a resource mutex): "
-                    << strerror(err) << " (" << err << ")\n";
-            return 1;
-        }
-
-        // N.B.: the non-blocking version returns -1 if in use -- flock(mutexFD, LOCK_EX | LOCK_NB) 
-        flock(mutexFD, LOCK_EX);
-        // Lock is released automatically:
-        // when you close(fd), when the process exits (even SIGKILL, even segfault)
-    }
 
     //https://www.pluralsight.com/blog/software-development/how-to-measure-execution-time-intervals-in-c--
     // Record start time
@@ -395,11 +412,6 @@ int main(int argc, char **argv)
     // Record end time
     auto finish = std::chrono::high_resolution_clock::now();
 
-    if(config.useMutex)
-    {
-        // Note: No unlock needed — flock is released automatically when fd is closed (end of scope) or the process dies.        
-        close(mutexFD);
-    }
 
     std::chrono::duration<double> elapsed = finish - start;
     double timeInSecs = elapsed.count();
