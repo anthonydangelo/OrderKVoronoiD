@@ -53,6 +53,13 @@ namespace
 
     using std::stoi;
 
+    struct OKVDConfig
+    {
+        bool useMutex = true;
+        int order = DEFAULT_ORDER;
+        vector<MyPoint_2> inputListVec;
+    };
+
     void PrintHelp()
     {
         ostringstream msg;
@@ -73,7 +80,7 @@ namespace
     
 
     //https://codeyarns.com/2015/01/30/how-to-parse-program-options-in-c-using-getopt_long/
-    bool ProcessArgs(int argc, char **argv, int &vdOrder, vector<MyPoint_2> &pointsVec, bool &useMutex)
+    bool ProcessArgs(int argc, char **argv, OKVDConfig &config) 
     {
         const char *const short_opts = "i:o:h";
         const option long_opts[] = {
@@ -104,7 +111,7 @@ namespace
                         int temp = stoi(optarg);
                         if (temp > 0)
                         {
-                            vdOrder = temp;
+                            config.order = temp;
                         } else 
                         {
                             cerr << "ERROR: Invalid order. Using default of " << DEFAULT_ORDER << endl;
@@ -112,7 +119,7 @@ namespace
                     }
                     catch (...)
                     {
-                        vdOrder = DEFAULT_ORDER;
+                        config.order = DEFAULT_ORDER;
                         cerr << endl << "Exception caught" << endl;
                         cerr << "ERROR: Invalid order. Trying to move forward with default of " << DEFAULT_ORDER << endl;
                     }
@@ -123,11 +130,11 @@ namespace
                 if(optarg)
                 {
                     inPointsString = string(optarg);
-                    if ( !Utility_Functions::extractPointsFromJSON2DArrayString(inPointsString, pointsVec))
+                    if ( !Utility_Functions::extractPointsFromJSON2DArrayString(inPointsString, config.inputListVec))
                     {
                         // malformed input point list. bounce back to user.
                         // error message printed in function
-                        // pointsVec is returned empty
+                        // config.inputListVec is returned empty
                         return false;
                     }
                 }
@@ -136,7 +143,7 @@ namespace
             case 256:
                 // request to not to use a resource mutex in the program.
                 // this is useful if you want to manage a mutex in a bash script instead
-                useMutex = false;
+                config.useMutex = false;
                 break;
 
             case 'h': // -h or --help
@@ -146,6 +153,40 @@ namespace
             }
         }
         return true;
+    }
+
+    void initializeOrDie(int argc, char **argv, OKVDConfig &config)
+    {
+        if ((1 == argc) 
+            || !ProcessArgs(argc, argv, config) 
+            || config.inputListVec.empty() 
+            || config.order < 1 // order is defaulted or set in ProcessArgs
+            || config.order >= config.inputListVec.size())
+        {
+            size_t numInPoints = config.inputListVec.size();
+            cout << "\nThere was an error starting up the program. Review the following and ensure the inputs are legal." << endl;
+            PrintHelp();
+            cout << endl
+                 << "You requested the order-" << config.order;
+            cout << " Voronoi diagram on the " << numInPoints << " point(s): " << endl;
+            cout << "\"";
+            for (size_t ind = 0; ind < numInPoints; ++ind)
+            {
+                MyPoint_2 p = config.inputListVec[ind];
+                cout << "( " << p.x() << ", " << p.y() << ") ";
+                if (ind < numInPoints - 1)
+                {
+                    cout << ", ";
+                }
+            }
+            cout << "\"" << endl;
+            if (config.order >= numInPoints)
+            {
+                cout << "\nFor 'n' input points, the order number must not exceed 'n-1'.\n\n";
+            }
+            exit(1);
+        }
+        return;
     }
 
     template <class T,class output_iterator>
@@ -212,41 +253,14 @@ int main(int argc, char **argv)
 {
 
     int mutexFD = -1;
-    bool useMutex = true;
-    vector<MyPoint_2> inputListVec;
+    OKVDConfig config;
     vector< MyPoint_2 > endpointsVec;
-    int order = DEFAULT_ORDER;
     vector< pair<size_t, size_t> > segmentEndPtsVec;
 
-    if ( (1 == argc)
-        || !ProcessArgs(argc, argv, order, inputListVec, useMutex) 
-        || inputListVec.empty()
-        || order < 1    // order is defaulted or set in ProcessArgs
-        || order >= inputListVec.size()) 
-    {        
-        cout << "\nThere was an error starting up the program. Review the following and ensure the inputs are legal." << endl;
-        PrintHelp();
-        cout <<  endl << "You requested the order-" << order;
-        cout << " Voronoi diagram on the " << inputListVec.size() << " point(s): " << endl;
-        cout <<  "\"";
-        for(size_t ind = 0; ind < inputListVec.size(); ++ind)
-        {
-            MyPoint_2 p = inputListVec[ind];
-            cout << "( " << p.x() << ", " << p.y() << ") ";
-            if(ind < inputListVec.size() - 1)
-            {
-                cout << ", ";
-            }
-        }
-        cout << "\"" << endl;
-        if (order >= inputListVec.size())
-        {
-            cout << "\nFor 'n' input points, the order number must not exceed 'n-1'.\n\n";
-        }
-        return 1;
-    }
+    initializeOrDie(argc, argv, config);
 
-    if(useMutex)
+
+    if(config.useMutex)
     {
         mutexFD = open(FLOCK_PATH, O_CREAT | O_RDWR, 0600);
         if (mutexFD == -1) 
@@ -267,17 +281,15 @@ int main(int argc, char **argv)
     // Record start time
     auto start = std::chrono::high_resolution_clock::now();
     
-    size_t numInPoints = inputListVec.size();
-
-    MyKernel::Iso_rectangle_2 bbox = Utility_Functions::computeBBox(inputListVec);
+    MyKernel::Iso_rectangle_2 bbox = Utility_Functions::computeBBox(config.inputListVec);
 
     MyDelaunay dt;
     MyRegularI rti;
     MyRegularTriangulation rt;
     
-    dt.insert(inputListVec.begin(),inputListVec.end());
+    dt.insert(config.inputListVec.begin(), config.inputListVec.end());
 
-    if ((2 == order) || (3 == order)) 
+    if ((2 == config.order) || (3 == config.order)) 
     {
         //Delaunay and Voronoi for 2nd-3rd order
         for (MyDelaunay::Finite_edges_iterator it=dt.finite_edges_begin(); it!=dt.finite_edges_end(); ++it)
@@ -285,13 +297,13 @@ int main(int argc, char **argv)
             MyPoint_2 pt0=it->first->vertex(MyDelaunay::cw(it->second))->point();
             MyPoint_2 pt1=it->first->vertex(MyDelaunay::ccw(it->second))->point();
             MyVertexI vertI_cgal = rti.insert(MyWeighted_point_2(CGAL::midpoint(pt0,pt1),-CGAL::to_double(CGAL::squared_distance(pt0,pt1))/4.));
-            inputListVec.clear();
-            inputListVec.push_back(pt0);
-            inputListVec.push_back(pt1);
-            vertI_cgal -> info() = inputListVec;
+            config.inputListVec.clear();
+            config.inputListVec.push_back(pt0);
+            config.inputListVec.push_back(pt1);
+            vertI_cgal -> info() = config.inputListVec;
         }
 
-        if (3 == order)
+        if (3 == config.order)
         { 
             //Pour l'order 3
             //CAN WE ITERATE OVER DELAUNEY TRIANGLES???
@@ -306,74 +318,76 @@ int main(int argc, char **argv)
 
                 if (CGAL::compare_xy(pt0_ori0, pt1_ori0) == CGAL::EQUAL || CGAL::compare_xy(pt0_ori1, pt1_ori0) == CGAL::EQUAL)
                 {
-                    rt.insert(MyWeighted_point_2(CGAL::centroid(pt0_ori0, pt0_ori1, pt1_ori1), -CGAL::to_double(CGAL::squared_distance(pt0_ori0, pt0_ori1) +
-                                                                                                                CGAL::squared_distance(pt0_ori0, pt1_ori1) +
-                                                                                                                CGAL::squared_distance(pt1_ori1, pt0_ori1)) /
-                                                                                                   9.));
+                    rt.insert(MyWeighted_point_2(CGAL::centroid(pt0_ori0, pt0_ori1, pt1_ori1), 
+                                                                - CGAL::to_double(CGAL::squared_distance(pt0_ori0, pt0_ori1) 
+                                                                                    + CGAL::squared_distance(pt0_ori0, pt1_ori1) 
+                                                                                    + CGAL::squared_distance(pt1_ori1, pt0_ori1)) 
+                                                                / 9.));
                 }
                 else if (CGAL::compare_xy(pt0_ori0, pt1_ori1) == CGAL::EQUAL || CGAL::compare_xy(pt0_ori1, pt1_ori1) == CGAL::EQUAL)
                 {
-                    rt.insert(MyWeighted_point_2(CGAL::centroid(pt0_ori0, pt0_ori1, pt1_ori0), -CGAL::to_double(CGAL::squared_distance(pt0_ori0, pt0_ori1) +
-                                                                                                                CGAL::squared_distance(pt0_ori0, pt1_ori0) + 
-                                                                                                                CGAL::squared_distance(pt1_ori0, pt0_ori1)) /
-                                                                                                   9.));
+                    rt.insert(MyWeighted_point_2(CGAL::centroid(pt0_ori0, pt0_ori1, pt1_ori0), 
+                                                                -CGAL::to_double(CGAL::squared_distance(pt0_ori0, pt0_ori1) 
+                                                                                    + CGAL::squared_distance(pt0_ori0, pt1_ori0) 
+                                                                                    + CGAL::squared_distance(pt1_ori0, pt0_ori1)) 
+                                                                / 9.));
                 }
             }
         }
-    } else if (order == (numInPoints - 1))
+    } else if (config.order == (config.inputListVec.size() - 1))
     {
         double pt_x0 = 0; //base to compute centroid of n-1 points
         double pt_y0 = 0; //base to compute centroid of n-1 points
         double wt = 0;    //total weight : sum of all distances between two input points
-        for (vector<MyPoint_2>::iterator it_pt = inputListVec.begin(); it_pt != inputListVec.end(); ++it_pt)
+        for (vector<MyPoint_2>::iterator it_pt = config.inputListVec.begin(); it_pt != config.inputListVec.end(); ++it_pt)
         {
             pt_x0 = pt_x0 + CGAL::to_double((*it_pt).x());
             pt_y0 = pt_y0 + CGAL::to_double((*it_pt).y());
-            for (vector<MyPoint_2>::iterator it_pt2 = it_pt + 1; it_pt2 != inputListVec.end(); ++it_pt2)
+            for (vector<MyPoint_2>::iterator it_pt2 = it_pt + 1; it_pt2 != config.inputListVec.end(); ++it_pt2)
             {
                 wt = wt + CGAL::to_double(CGAL::squared_distance(*it_pt, *it_pt2));
             }
         }
-        for (vector<MyPoint_2>::iterator it_pt = inputListVec.begin(); it_pt != inputListVec.end(); ++it_pt)
+        for (vector<MyPoint_2>::iterator it_pt = config.inputListVec.begin(); it_pt != config.inputListVec.end(); ++it_pt)
         {
             double w = wt;
             //compute centroid of the set of input points / *it_pt
             double pt_x = pt_x0 - CGAL::to_double((*it_pt).x());
             double pt_y = pt_y0 - CGAL::to_double((*it_pt).y());
             //remove from w the sum of distance of input point from *it_pt
-            for (vector<MyPoint_2>::iterator it_pt2 = inputListVec.begin(); it_pt2 != inputListVec.end(); ++it_pt2)
+            for (vector<MyPoint_2>::iterator it_pt2 = config.inputListVec.begin(); it_pt2 != config.inputListVec.end(); ++it_pt2)
             { //Weighted_point_2 equivalent
                 w = w - CGAL::to_double(CGAL::squared_distance(*it_pt, *it_pt2));
             }
-            w = -w / (double)(order * order);
-            pt_x = pt_x / (double)order;
-            pt_y = pt_y / (double)order;
+            w = -w / (double)(config.order * config.order);
+            pt_x = pt_x / (double)config.order;
+            pt_y = pt_y / (double)config.order;
             rt.insert(MyWeighted_point_2(MyPoint_2(pt_x, pt_y), w));
         }
     } 
     else
     {
         //k-th Delauney and Voronoi
-        k_delaunay<MyKernel>(rt, inputListVec, order);
+        k_delaunay<MyKernel>(rt, config.inputListVec, config.order);
     }
 
-    if (1 == order)
+    if (1 == config.order)
     {
-        build_dual_edge_list(dt,bbox, endpointsVec, segmentEndPtsVec);
+        build_dual_edge_list(dt, bbox, endpointsVec, segmentEndPtsVec);
     } 
-    else if (2 == order)
+    else if (2 == config.order)
     {
-        build_dual_edge_list(rti,bbox, endpointsVec, segmentEndPtsVec);
+        build_dual_edge_list(rti, bbox, endpointsVec, segmentEndPtsVec);
     }
     else 
     {
-        build_dual_edge_list(rt,bbox, endpointsVec, segmentEndPtsVec);
+        build_dual_edge_list(rt, bbox, endpointsVec, segmentEndPtsVec);
     }
 
     ostringstream sStream;
 
 
-    sStream << "{\n" << Pretty_Print::wrapStringInQuotes(ORDER_NAME_STRING) << ": \"" << order << "\",";
+    sStream << "{\n" << Pretty_Print::wrapStringInQuotes(ORDER_NAME_STRING) << ": \"" << config.order << "\",";
     sStream << "\n" << Pretty_Print::wrapStringInQuotes(VD_NAME_STRING) << ": ";
     sStream << Pretty_Print::voronoiDiagramToJSONString(endpointsVec, segmentEndPtsVec) << ",\n";
 
@@ -381,7 +395,7 @@ int main(int argc, char **argv)
     // Record end time
     auto finish = std::chrono::high_resolution_clock::now();
 
-    if(useMutex)
+    if(config.useMutex)
     {
         // Note: No unlock needed — flock is released automatically when fd is closed (end of scope) or the process dies.        
         close(mutexFD);
