@@ -99,8 +99,9 @@ namespace okvd
 
         MyKernel::Iso_rectangle_2 computeBBox(const vector<MyPoint_2> &inputListVec)
         {
-            double maxX = std::numeric_limits<double>::min();
-            double maxY = std::numeric_limits<double>::min();
+            //numeric_limits<double>::min() is the smallest positive number, lowest is farthest negative
+            double maxX = std::numeric_limits<double>::lowest();
+            double maxY = std::numeric_limits<double>::lowest();
             double minX = std::numeric_limits<double>::max();
             double minY = std::numeric_limits<double>::max();
 
