@@ -2,7 +2,7 @@
 // Name        : OrderKVoronoiD.cpp
 // Author(s)   :- Sebastien Loriot, Sylvain Pion
 //              - Sebastien Loriot, Nicolas Carrez
-//              - Anthony D'Angelo (re-worked CGAL demo to output 
+//              - Anthony D'Angelo (re-worked CGAL demos to output 
 //                                  a json object of the OKVD arrangement 
 //                                  clipped by a bounding box),
 // Version     :
@@ -28,6 +28,20 @@
 //
 */
 // Description : 
+/*
+** Modified CGAL-4.11.2/demo/CGAL_ipelets/multi_delaunay.cpp
+** Computes the k-th order Voronoi diagram of n input points and outputs
+** the arrangement (clipped to a bounding box) as a JSON object on stdout.
+**
+** Algorithm: for each k-subset of input points, compute a weighted point
+** (centroid with weight = -sum of squared pairwise distances / k^2).
+** The regular triangulation of these weighted points is the k-th order
+** Delaunay; its dual is the k-th order Voronoi diagram.
+**
+** Special cases: k=1 uses standard Delaunay, k=2 and k=3 use optimized
+** paths, k=n-1 uses a closed-form, general k uses brute-force enumeration.
+** (Algorithm from CGAL's multi_delaunay ipelet demo.)   
+*/
 //============================================================================
 
 #include <getopt.h>
@@ -226,6 +240,8 @@ namespace
         return;
     }
 
+    // Clips infinite Voronoi edges (rays, lines) to the bounding box,
+    // converting them to finite segments suitable for output.   
     template <class T,class output_iterator>
     bool cast_into_seg(const T &obj, const MyKernel::Iso_rectangle_2 &bbox, output_iterator out_it) 
     {
@@ -240,7 +256,8 @@ namespace
         return ret;
     }
 
-    //Convert infinite objects into drawable segments
+    // Clips infinite Voronoi edges (rays, lines) to the bounding box,
+    // converting them to finite segments suitable for output.  
     template<class iterator,class output_iterator>
     void cast_into_seg(const iterator first, const iterator end,
                     const MyKernel::Iso_rectangle_2 &bbox, output_iterator out_it)
@@ -251,6 +268,8 @@ namespace
         }
     }
 
+    // Collects the dual (Voronoi) edges from the triangulation, filters
+    // degenerate segments, clips to bbox, and deduplicates endpoints.   
     void build_dual_(Voronoi_from_tri &v_recup, const MyKernel::Iso_rectangle_2 &bbox, 
                     vector< MyPoint_2 > &endpointsVec,
                     vector< pair<size_t, size_t> > &segmentEndPtsVec)
@@ -266,9 +285,9 @@ namespace
             }
         }
         
-        cast_into_seg(v_recup.ray_list.begin(),v_recup.ray_list.end(),bbox,std::back_inserter(seg_cont));//cast rays into segments in bbox
-        cast_into_seg(v_recup.line_list.begin(),v_recup.line_list.end(),bbox,std::back_inserter(seg_cont));//cast lines into segments in bbox
-        cast_into_seg(v_recup.seg_list.begin(),v_recup.seg_list.end(),bbox,std::back_inserter(seg_cont));//cast lines into segments in bbox
+        cast_into_seg(v_recup.ray_list.begin(),v_recup.ray_list.end(),bbox,std::back_inserter(seg_cont)); // clip rays to bbox
+        cast_into_seg(v_recup.line_list.begin(),v_recup.line_list.end(),bbox,std::back_inserter(seg_cont)); // clip lines to bbox
+        cast_into_seg(v_recup.seg_list.begin(),v_recup.seg_list.end(),bbox,std::back_inserter(seg_cont)); // clip segments to bbox
         Utility_Functions::insertSegmentEndpointsIntoPointSet(seg_cont, endpointsVec, segmentEndPtsVec);
     }
 
@@ -306,9 +325,13 @@ int main(int argc, char **argv)
     
     dt.insert(config.inputListVec.begin(), config.inputListVec.end());
 
+
     if ((2 == config.order) || (3 == config.order)) 
     {
-        //Delaunay and Voronoi for 2nd-3rd order
+        // Delaunay and Voronoi for 2nd-3rd order
+        // Order 2: for each edge of the 1st-order Delaunay, insert the midpoint
+        // with weight = -(edge length)^2 / 4. The regular triangulation of these
+        // is the 2nd-order Delaunay.   
         for (MyDelaunay::Finite_edges_iterator it=dt.finite_edges_begin(); it!=dt.finite_edges_end(); ++it)
         {
             MyPoint_2 pt0=it->first->vertex(MyDelaunay::cw(it->second))->point();
@@ -320,6 +343,9 @@ int main(int argc, char **argv)
             vertI_cgal -> info() = config.inputListVec;
         }
 
+        // Order 3: for each pair of adjacent edges in the 2nd-order RT sharing
+        // a common original point, insert the centroid of the 3 original points
+        // with weight = -(sum of squared pairwise distances) / 9.   
         if (3 == config.order)
         { 
             //Pour l'order 3
@@ -353,6 +379,10 @@ int main(int argc, char **argv)
         }
     } else if (config.order == (config.inputListVec.size() - 1))
     {
+        // Order n-1: for each input point p, insert the centroid of all other
+        // points with weight = -(total squared distance - distances to p) / (n-1)^2.
+        // This is O(n^2) total vs. O(C(n,n-1)) = O(n) for the general case,
+        // but the constant is much smaller.           
         double pt_x0 = 0; //base to compute centroid of n-1 points
         double pt_y0 = 0; //base to compute centroid of n-1 points
         double wt = 0;    //total weight : sum of all distances between two input points

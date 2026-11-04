@@ -97,6 +97,9 @@ namespace okvd
             return;
         }    
 
+        // Computes the axis-aligned bounding box of the input points,
+        // expanded by BBOX_OFFSET in each direction to ensure the clipped
+        // Voronoi diagram has visible context around the convex hull.   
         MyKernel::Iso_rectangle_2 computeBBox(const vector<MyPoint_2> &inputListVec)
         {
             //numeric_limits<double>::min() is the smallest positive number, lowest is farthest negative
@@ -104,8 +107,6 @@ namespace okvd
             double maxY = std::numeric_limits<double>::lowest();
             double minX = std::numeric_limits<double>::max();
             double minY = std::numeric_limits<double>::max();
-
-            size_t numInPoints = inputListVec.size();
 
             for (const MyPoint_2 &p : inputListVec)
             {

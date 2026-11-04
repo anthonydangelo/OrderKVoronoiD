@@ -8,32 +8,15 @@
 
 #include <unistd.h>
 #include <cstdlib>
-#include <fstream>
-#include <ctime>
 #include <cstddef> // std::size_t
 
-#include <math.h> /* fabs */
+#include <cmath> /* fabs */
 
 #include <utility>
 
-//https://github.com/CGAL/cgal/blob/master/Generator/examples/Generator/random_grid.cpp
-//https://doc.cgal.org/latest/Kernel_23/classCGAL_1_1Exact__predicates__exact__constructions__kernel.html
-//https://doc.cgal.org/latest/Cone_spanners_2/index.html
-//#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
-#include <CGAL/Exact_predicates_exact_constructions_kernel_with_root_of.h>
-#include <CGAL/algorithm.h>
-
 #include <CGAL/Lazy_exact_nt.h>
 
-#include <CGAL/Polygon_2.h>
-#include <CGAL/Polygon_with_holes_2.h>
-#include <CGAL/Polygon_set_2.h>
 #include <CGAL/Compute_cone_boundaries_2.h>
-
-#include <CGAL/squared_distance_2.h> //for 2D functions
-#include <CGAL/number_utils.h>       //for cgal::sqrt
-
-#include <CGAL/ch_akl_toussaint.h>
 
 #include <CGAL/Kernel/global_functions.h>
 #include <CGAL/enum.h>
@@ -47,10 +30,6 @@
 #include <CGAL/Regular_triangulation_face_base_2.h>
 #include <CGAL/Regular_triangulation_vertex_base_2.h>
 #include <CGAL/Regular_triangulation_2.h>
-
-
-
-#define MY_LAZY_COMPS   (1)
 
 
 // NOTE: 
@@ -78,24 +57,21 @@
 #define FLOCK_PATH ("/tmp/one-st-tree-mutex.lock")
 
 
-#define MY_VERBOSE (0)
-
 //magic numbers
-#define DEFAULT_ORDER (1)
-#define BBOX_OFFSET (10)
+constexpr int DEFAULT_ORDER = 1;
+constexpr int BBOX_OFFSET = 10;
 
-#define ELAPSED_TIME_NAME_STRING ("elapsedTime")
-#define INPUT_POINTS_NAME_STRING ("inputPoints")
-#define ORDER_NAME_STRING ("order")
-#define VD_NAME_STRING ("voronoiDiagram")
-#define VD_POINTS_NAME_STRING ("voronoiPoints")
-#define VD_EDGE_LIST_PT_INDICES_NAME_STRING ("voronoiEdgesPtIndices")
-#define VD_EDGE_NAME_STRING ("voronoiEdge")
-#define VD_EDGE_FIRST_INDEX_NAME_STRING ("firstIndex")
-#define VD_EDGE_SECOND_INDEX_NAME_STRING ("secondIndex")
+constexpr const char* ELAPSED_TIME_NAME_STRING = "elapsedTime";
+constexpr const char* ORDER_NAME_STRING = "order";
+constexpr const char* VD_NAME_STRING = "voronoiDiagram";
+constexpr const char* VD_POINTS_NAME_STRING = "voronoiPoints";
+constexpr const char* VD_EDGE_LIST_PT_INDICES_NAME_STRING = "voronoiEdgesPtIndices";
+constexpr const char* VD_EDGE_NAME_STRING = "voronoiEdge";
+constexpr const char* VD_EDGE_FIRST_INDEX_NAME_STRING = "firstIndex";
+constexpr const char* VD_EDGE_SECOND_INDEX_NAME_STRING = "secondIndex";
 //////////////////////////////
 
-#define DOUBLE_EPSILON (0.000001)
+constexpr double DOUBLE_EPSILON = 0.000001;
 
 
 namespace okvd 
@@ -111,25 +87,17 @@ namespace okvd
     using std::size_t;
     using std::pair;
 
-//https://doc.cgal.org/latest/Kernel_23/Kernel_23_2exact_8cpp-example.html#_a0
-//https://doc.cgal.org/latest/Kernel_23/Kernel_23_2intersection_visitor_8cpp-example.html#_a0
-//https://doc.cgal.org/latest/Kernel_d/group__PkgKernelDFunctions.html#ga0aa3e8b6bdf1bff509f8e2672ef194d1
-//https://doc.cgal.org/latest/Cone_spanners_2/index.html
-//typedef Exact_predicates_exact_constructions_kernel Kernel;
-#   if (MY_LAZY_COMPS)
-        typedef CGAL::Lazy_exact_nt<CORE::Expr> Lazy_FT;
-        typedef CGAL::Simple_cartesian< Lazy_FT >  MyKernel;
-#   else
-        typedef CGAL::Exact_predicates_exact_constructions_kernel_with_root_of      MyKernel;
-#   endif
+//  Exact kernel with lazy interval-arithmetic evaluation (faster than
+//  "EPECK_with_root_of" for typical inputs; both are fully exact).
+    typedef CGAL::Lazy_exact_nt< CORE::Expr > Lazy_FT;
+    typedef CGAL::Simple_cartesian< Lazy_FT > MyKernel;
+
 //https://doc.cgal.org/latest/Arrangement_on_surface_2/index.html
     typedef MyKernel::FT                                                        My_Number_type;
 
     typedef MyKernel::Point_2                                                 MyPoint_2;
     typedef MyKernel::Segment_2                                               MySegment_2;
     typedef MyKernel::Line_2                                                  MyLine_2;
-    typedef MyKernel::Intersect_2                                             MyIntersect_2;
-    typedef MyKernel::Direction_2                                             MyDirection_2;
 
 //  CGAL-4.11.2/demo/CGAL_ipelets/multi_delaunay.cpp
     typedef CGAL::Delaunay_triangulation_2<MyKernel>                                        MyDelaunay;
