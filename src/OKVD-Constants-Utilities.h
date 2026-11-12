@@ -113,7 +113,7 @@ namespace okvd
     typedef MyKernel::Segment_2                                                             MySegment_2;
     typedef MyKernel::Line_2                                                                MyLine_2;
 
-    typedef struct Voronoi_from_tri
+    struct Voronoi_from_tri
     { //Class using stream to get the voronoi diagram
         list<MyRay_2> ray_list;
         list<MyLine_2> line_list;
@@ -122,7 +122,7 @@ namespace okvd
         void operator<<(const MyRay_2 &p) { ray_list.push_back(p); }
         void operator<<(const MyLine_2 &p) { line_list.push_back(p); }
         void operator<<(const MySegment_2 &p) { seg_list.push_back(p); }
-    } Voronoi_from_tri;
+    };
 
 
 
