@@ -17,26 +17,31 @@
 // 
 //
 // Author(s)     : Sebastien Loriot, Nicolas Carrez
+//
+// Modified for OrderKVoronoiD (2026): the centroids and weights are computed in the
+// kernel's number type (Kernel::FT) instead of double, so with an exact kernel the
+// weighted points are exact.
 
 template<class Kernel>
-double give_weight(const typename Kernel::Weighted_point_2& P){return CGAL::to_double(P.weight());}
+typename Kernel::FT give_weight(const typename Kernel::Weighted_point_2& P){return P.weight();}
 template<class Kernel>
-double give_x(const typename Kernel::Weighted_point_2& P){return CGAL::to_double(P.point().x());}
+typename Kernel::FT give_x(const typename Kernel::Weighted_point_2& P){return P.point().x();}
 template<class Kernel>
-double give_y(const typename Kernel::Weighted_point_2& P){return CGAL::to_double(P.point().y());}
+typename Kernel::FT give_y(const typename Kernel::Weighted_point_2& P){return P.point().y();}
 
 template<class Kernel>
-double give_weight(const typename Kernel::Point_2& ){return 0;}
+typename Kernel::FT give_weight(const typename Kernel::Point_2& ){return typename Kernel::FT(0);}
 template<class Kernel>
-double give_x(const typename Kernel::Point_2& P){return CGAL::to_double(P.x());}
+typename Kernel::FT give_x(const typename Kernel::Point_2& P){return P.x();}
 template<class Kernel>
-double give_y(const typename Kernel::Point_2& P){return CGAL::to_double(P.y());}
+typename Kernel::FT give_y(const typename Kernel::Point_2& P){return P.y();}
 
 
 template <class Kernel, class Regular,class input_DS>
 void k_delaunay(Regular& rt,input_DS& input_wpt,int order){
   typedef typename Kernel::Point_2 Point_2;
   typedef typename Kernel::Weighted_point_2  Weighted_point_2;
+  typedef typename Kernel::FT                FT;
   
   std::vector<typename input_DS::iterator> Current_sel;//DS that will contain all possible combinaisons of k points (iterator), where k is the order
   typename input_DS::iterator it_wpt = input_wpt.begin();
@@ -69,23 +74,23 @@ void k_delaunay(Regular& rt,input_DS& input_wpt,int order){
     }
     //Create the weighted point associated to the current selection of k points
     it_it_wpt = Current_sel.begin();
-    double weight = 0;
-    double pt_x = 0;
-    double pt_y = 0;
+    FT weight = 0;
+    FT pt_x = 0;
+    FT pt_y = 0;
     for(;it_it_wpt!=Current_sel.end();++it_it_wpt){
       pt_x = pt_x + give_x<Kernel>((**it_it_wpt));
       pt_y = pt_y + give_y<Kernel>((**it_it_wpt));      
       weight = weight + order * give_weight<Kernel>((**it_it_wpt));
       //substract form the weight the sum of the squared distances between each pair of wpoints selected
       for(typename std::vector<typename input_DS::iterator>::iterator le_WptI_cgal0 = it_it_wpt+1 ;le_WptI_cgal0!=Current_sel.end();++le_WptI_cgal0){
-        weight = weight - CGAL::to_double(CGAL::squared_distance(
+        weight = weight - CGAL::squared_distance(
                                             typename Kernel::Construct_point_2()(**le_WptI_cgal0),
-                                            typename Kernel::Construct_point_2()(**it_it_wpt)));
+                                            typename Kernel::Construct_point_2()(**it_it_wpt));
       }
     }
-    weight = weight /(double) (order*order);
-    pt_x = pt_x /(double) order;
-    pt_y = pt_y /(double) order;
+    weight = weight / (order*order);
+    pt_x = pt_x / order;
+    pt_y = pt_y / order;
     rt.insert(Weighted_point_2(Point_2(pt_x,pt_y),weight));
   }while(*(Current_sel.begin())!=stop_combi);
 }

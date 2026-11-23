@@ -338,7 +338,7 @@ int main(int argc, char **argv)
         {
             MyPoint_2 pt0=it->first->vertex(MyDelaunay::cw(it->second))->point();
             MyPoint_2 pt1=it->first->vertex(MyDelaunay::ccw(it->second))->point();
-            MyVertexI vertI_cgal = rti.insert(MyWeighted_point_2(CGAL::midpoint(pt0,pt1),-CGAL::to_double(CGAL::squared_distance(pt0,pt1))/4.));
+            MyVertexI vertI_cgal = rti.insert(MyWeighted_point_2(CGAL::midpoint(pt0,pt1),-CGAL::squared_distance(pt0,pt1) / 4));
             config.inputListVec.clear();
             config.inputListVec.push_back(pt0);
             config.inputListVec.push_back(pt1);
@@ -363,54 +363,56 @@ int main(int argc, char **argv)
 
                 if (CGAL::compare_xy(pt0_ori0, pt1_ori0) == CGAL::EQUAL || CGAL::compare_xy(pt0_ori1, pt1_ori0) == CGAL::EQUAL)
                 {
-                    rt.insert(MyWeighted_point_2(CGAL::centroid(pt0_ori0, pt0_ori1, pt1_ori1), 
-                                                                - CGAL::to_double(CGAL::squared_distance(pt0_ori0, pt0_ori1) 
-                                                                                    + CGAL::squared_distance(pt0_ori0, pt1_ori1) 
-                                                                                    + CGAL::squared_distance(pt1_ori1, pt0_ori1)) 
-                                                                / 9.));
+                    rt.insert(MyWeighted_point_2(CGAL::centroid(pt0_ori0, pt0_ori1, pt1_ori1),
+                                                 -(CGAL::squared_distance(pt0_ori0, pt0_ori1)
+                                                   + CGAL::squared_distance(pt0_ori0, pt1_ori1)
+                                                   + CGAL::squared_distance(pt1_ori1, pt0_ori1)) 
+						 / 9));
                 }
                 else if (CGAL::compare_xy(pt0_ori0, pt1_ori1) == CGAL::EQUAL || CGAL::compare_xy(pt0_ori1, pt1_ori1) == CGAL::EQUAL)
                 {
-                    rt.insert(MyWeighted_point_2(CGAL::centroid(pt0_ori0, pt0_ori1, pt1_ori0), 
-                                                                -CGAL::to_double(CGAL::squared_distance(pt0_ori0, pt0_ori1) 
-                                                                                    + CGAL::squared_distance(pt0_ori0, pt1_ori0) 
-                                                                                    + CGAL::squared_distance(pt1_ori0, pt0_ori1)) 
-                                                                / 9.));
+                    rt.insert(MyWeighted_point_2(CGAL::centroid(pt0_ori0, pt0_ori1, pt1_ori0),
+                                                 -(CGAL::squared_distance(pt0_ori0, pt0_ori1)
+                                                   + CGAL::squared_distance(pt0_ori0, pt1_ori0)
+                                                   + CGAL::squared_distance(pt1_ori0, pt0_ori1)) 
+						 / 9));
                 }
             }
         }
     } else if (config.order == (config.inputListVec.size() - 1))
     {
-        // Order n-1: for each input point p, insert the centroid of all other
-        // points with weight = -(total squared distance - distances to p) / (n-1)^2.
-        // This is O(n^2) total vs. O(C(n,n-1)) = O(n) for the general case,
-        // but the constant is much smaller.           
-        double pt_x0 = 0; //base to compute centroid of n-1 points
-        double pt_y0 = 0; //base to compute centroid of n-1 points
-        double wt = 0;    //total weight : sum of all distances between two input points
+        // Order n-1: for each input point p, insert the centroid of all the other
+        // points, with weight = -(sum of their squared pairwise distances) / (n-1)^2.
+        // The sums over all points are computed once, and each p's terms subtracted:
+        // O(n^2) in all, instead of O(n^3) for the general method with k = n-1
+        // (n subsets of n-1 points, O(n^2) pairs each).
+        // Computed in the kernel's exact number type, so the weighted points are exact.
+        My_Number_type pt_x0 = 0; // sum of the x coordinates of all input points
+        My_Number_type pt_y0 = 0; // sum of the y coordinates of all input points
+        My_Number_type wt = 0;    // sum of the squared distances between all pairs of input points
         for (vector<MyPoint_2>::iterator it_pt = config.inputListVec.begin(); it_pt != config.inputListVec.end(); ++it_pt)
         {
-            pt_x0 = pt_x0 + CGAL::to_double((*it_pt).x());
-            pt_y0 = pt_y0 + CGAL::to_double((*it_pt).y());
+            pt_x0 = pt_x0 + (*it_pt).x();
+            pt_y0 = pt_y0 + (*it_pt).y();
             for (vector<MyPoint_2>::iterator it_pt2 = it_pt + 1; it_pt2 != config.inputListVec.end(); ++it_pt2)
             {
-                wt = wt + CGAL::to_double(CGAL::squared_distance(*it_pt, *it_pt2));
+                wt = wt + CGAL::squared_distance(*it_pt, *it_pt2);
             }
         }
         for (vector<MyPoint_2>::iterator it_pt = config.inputListVec.begin(); it_pt != config.inputListVec.end(); ++it_pt)
         {
-            double w = wt;
-            //compute centroid of the set of input points / *it_pt
-            double pt_x = pt_x0 - CGAL::to_double((*it_pt).x());
-            double pt_y = pt_y0 - CGAL::to_double((*it_pt).y());
-            //remove from w the sum of distance of input point from *it_pt
+            My_Number_type w = wt;
+            // centroid of the input points other than *it_pt
+            My_Number_type pt_x = pt_x0 - (*it_pt).x();
+            My_Number_type pt_y = pt_y0 - (*it_pt).y();
+            // remove from w the squared distances from *it_pt to the other points
             for (vector<MyPoint_2>::iterator it_pt2 = config.inputListVec.begin(); it_pt2 != config.inputListVec.end(); ++it_pt2)
-            { //Weighted_point_2 equivalent
-                w = w - CGAL::to_double(CGAL::squared_distance(*it_pt, *it_pt2));
+            {
+                w = w - CGAL::squared_distance(*it_pt, *it_pt2);
             }
-            w = -w / (double)(config.order * config.order);
-            pt_x = pt_x / (double)config.order;
-            pt_y = pt_y / (double)config.order;
+            w = -w / (config.order * config.order);
+            pt_x = pt_x / config.order;
+            pt_y = pt_y / config.order;
             rt.insert(MyWeighted_point_2(MyPoint_2(pt_x, pt_y), w));
         }
     } 
