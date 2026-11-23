@@ -14,6 +14,9 @@
 
 #include <utility>
 
+#include <iomanip>  // std::setprecision
+#include <limits>   // std::numeric_limits
+
 #include <CGAL/Lazy_exact_nt.h>
 
 #include <CGAL/Compute_cone_boundaries_2.h>
@@ -195,6 +198,10 @@ namespace okvd
         inline string point2ToJSON(const MyPoint_2 &p)
         {
             ostringstream sStream;
+
+            // Lazy_exact_nt prints its double approximation; the default stream
+            // precision (6 significant digits) would drop most of it.
+            sStream << std::setprecision(std::numeric_limits<double>::max_digits10);
 
             sStream << "{\"x\":\"" << p.x() << "\", "
                     << "\"y\":\"" << p.y() << "\"}";
