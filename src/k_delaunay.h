@@ -20,7 +20,9 @@
 //
 // Modified for OrderKVoronoiD (2026): the centroids and weights are computed in the
 // kernel's number type (Kernel::FT) instead of double, so with an exact kernel the
-// weighted points are exact.
+// weighted points are exact; and with a lazy number type, their exact values are
+// computed at once, so that each weighted point stores three numbers rather than the
+// O(k^2) operations that produced them.
 
 template<class Kernel>
 typename Kernel::FT give_weight(const typename Kernel::Weighted_point_2& P){return P.weight();}
@@ -91,6 +93,13 @@ void k_delaunay(Regular& rt,input_DS& input_wpt,int order){
     weight = weight / (order*order);
     pt_x = pt_x / order;
     pt_y = pt_y / order;
+    // A lazy number (CGAL::Lazy_exact_nt) keeps a record of the operations that
+    // produced it, in case its exact value is needed later: O(k^2) operations here,
+    // about 20 KB per weighted point for k = 9. Computing the exact values now
+    // replaces each record with one exact rational.
+    weight.exact();
+    pt_x.exact();
+    pt_y.exact();
     rt.insert(Weighted_point_2(Point_2(pt_x,pt_y),weight));
   }while(*(Current_sel.begin())!=stop_combi);
 }

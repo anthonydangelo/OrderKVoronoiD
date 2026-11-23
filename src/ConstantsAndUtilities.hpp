@@ -20,7 +20,7 @@
 #include <CGAL/Lazy_exact_nt.h>
 
 #include <CGAL/Simple_cartesian.h>
-#include <CGAL/CORE_Expr.h>
+#include <CGAL/Gmpq.h>
 
 #include <CGAL/Kernel/global_functions.h>
 #include <CGAL/enum.h>
@@ -91,9 +91,10 @@ namespace okvd
     using std::size_t;
     using std::pair;
 
-//  Exact kernel with lazy interval-arithmetic evaluation (faster than
-//  "EPECK_with_root_of" for typical inputs; both are fully exact).
-    typedef CGAL::Lazy_exact_nt< CORE::Expr > Lazy_FT;
+//  Exact rationals (GMP), with lazy interval-arithmetic evaluation. No square roots
+//  are needed: every coordinate and weight is computed from the input doubles with
+//  + - * / only, so rationals represent all of them exactly.
+    typedef CGAL::Lazy_exact_nt< CGAL::Gmpq > Lazy_FT;
     typedef CGAL::Simple_cartesian< Lazy_FT > MyKernel;
 
 //https://doc.cgal.org/latest/Arrangement_on_surface_2/index.html
