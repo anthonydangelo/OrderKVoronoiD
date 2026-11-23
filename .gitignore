@@ -5,3 +5,4 @@ Core_Diagnostics
 OrderKVoronoiD.old
 OrderKVoronoiD_d.old
 OrderKVoronoiD-asan
+tests/out
