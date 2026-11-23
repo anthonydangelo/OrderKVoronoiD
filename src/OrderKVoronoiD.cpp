@@ -46,7 +46,7 @@
 
 #include <getopt.h>
 
-#include "OKVD-Constants-Utilities.h"
+#include "ConstantsAndUtilities.hpp"
 #include "k_delaunay.h"
 #include <CGAL/Iso_rectangle_2.h>
 
