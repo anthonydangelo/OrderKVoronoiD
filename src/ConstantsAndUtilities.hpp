@@ -75,8 +75,6 @@ constexpr const char* VD_EDGE_FIRST_INDEX_NAME_STRING       = "firstIndex";
 constexpr const char* VD_EDGE_SECOND_INDEX_NAME_STRING      = "secondIndex";
 //////////////////////////////
 
-constexpr double DOUBLE_EPSILON = 0.000001;
-
 
 namespace okvd 
 {
@@ -145,14 +143,6 @@ namespace okvd
 
         void removeDuplicatePoints(vector< MyPoint_2 > & points);
 
-        //Assume the numbers aren't too large or small for doubles
-        inline bool pointsAreTooClose(const MyPoint_2 & first, const MyPoint_2 & second)
-        {
-            return ( (fabs(CGAL::to_double(first.x()) - CGAL::to_double(second.x())) < DOUBLE_EPSILON) 
-                    && (fabs(CGAL::to_double(first.y()) - CGAL::to_double(second.y())) < DOUBLE_EPSILON) );
-        }
-
-
         /*
         ** according to "the machine":
         ** A function template (as opposed to a full specialization) is already allowed to have identical definitions 
@@ -169,7 +159,7 @@ namespace okvd
             if(!myColl.empty()){
                 auto endIt = end(myColl);
                 for (auto it = begin(myColl); it != endIt; ++it, ++myIndex) {
-                    if(pointsAreTooClose(*it, pt)){
+                    if(*it == pt){   // exact comparison: distinct vertices are never merged 
                         return true;
                     }
                 }    
@@ -204,6 +194,12 @@ namespace okvd
             // Lazy_exact_nt prints its double approximation; the default stream
             // precision (6 significant digits) would drop most of it.
             sStream << std::setprecision(std::numeric_limits<double>::max_digits10);
+
+            // Print from the exact value: within one unit in the last place of it,
+            // whichever way the point was computed (an approximation alone is only
+            // guaranteed to about 5 significant digits).
+            p.x().exact();
+            p.y().exact();
 
             sStream << "{\"x\":\"" << p.x() << "\", "
                     << "\"y\":\"" << p.y() << "\"}";
