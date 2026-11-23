@@ -50,7 +50,7 @@
 #include "k_delaunay.h"
 #include <CGAL/Iso_rectangle_2.h>
 
-#include <chrono>  // for high_resolution_clock
+#include <chrono>  // for steady_clock
 #include <limits> 
 
 #include <fcntl.h>           /* For O_* constants */
@@ -58,6 +58,7 @@
 #include <unistd.h>
 #include <sys/file.h>
 #include <errno.h>
+#include <cstring>           /* strerror */
 
 
 using namespace okvd;
@@ -92,20 +93,22 @@ namespace
         bool useMutex = true;
     };
 
-    void PrintHelp()
+    void PrintHelp(std::ostream &out)
     {
         ostringstream msg;
         msg << "\nOrderKVoronoiD / OrderKVoronoiD_d: Help\n"
-               "====================================================================================================================\n"
+               "======================================================================================================================\n"
                "--input-list (-i) < string s = \"[[x,y],[u,v],...]\">:  Calculate the VD of these 'n' points (need quotes around list)\n"
-               "--order     (-o) < int k >:                           Calculate the k'th-order VD for 1 <= k < n (defaults to " << DEFAULT_ORDER << ")\n"
-               "--no-mutex:                                           Do not use a resource mutex (currently a file lock with a blocking lock call).\n"
-               "                                                      This option is useful, e.g., if you want to manage the mutex in an invoking bash script.\n"
-               "--help      (-h):                                     Show help\n"
+               "--order      (-o) < int k >:                          Calculate the k'th-order VD for 1 <= k < n (defaults to " << DEFAULT_ORDER << ")\n"
+               "--no-mutex:                                           Do not use a resource mutex (currently a file lock with a \n"
+               "                                                      blocking lock call).\n"
+               "                                                      This option is useful, e.g., if you want to manage the mutex in \n"
+               "                                                      an invoking bash script.\n"
+               "--help       (-h):                                    Show help\n"
                "\ne.g., -o 2 -i \"[[1,0], [2,0], [3,0]]\"\n"
                "You must pass in at least \"-i\" and a list of at least 2 points.";
 
-        cout << msg.str();
+        out << msg.str() << endl;
         return;
     }
 
@@ -178,7 +181,10 @@ namespace
                 config.useMutex = false;
                 break;
 
-            case 'h': // -h or --help
+            case 'h': // -h or --help: the help on stdout, and success
+                PrintHelp(cout);
+                exit(0);
+
             case '?': // Unrecognized option
             default:
                 return false;
@@ -195,28 +201,28 @@ namespace
             || ! ProcessArgs(argc, argv, config) 
             || config.inputListVec.empty() 
             || config.order < 1 // order is defaulted or set in ProcessArgs
-            || config.order >= config.inputListVec.size())
+            || static_cast<size_t>(config.order) >= config.inputListVec.size())
         {
             size_t numInPoints = config.inputListVec.size();
-            cout << "\nThere was an error starting up the program. Review the following and ensure the inputs are legal." << endl;
-            PrintHelp();
-            cout << endl
+            cerr << "\nThere was an error starting up the program. Review the following and ensure the inputs are legal." << endl;
+            PrintHelp(cerr);
+            cerr << endl
                  << "You requested the order-" << config.order;
-            cout << " Voronoi diagram on the " << numInPoints << " point(s): " << endl;
-            cout << "\"";
+            cerr << " Voronoi diagram on the " << numInPoints << " point(s): " << endl;
+            cerr << "\"";
             for (size_t ind = 0; ind < numInPoints; ++ind)
             {
                 MyPoint_2 p = config.inputListVec[ind];
-                cout << "( " << p.x() << ", " << p.y() << ") ";
+                cerr << "( " << p.x() << ", " << p.y() << ") ";
                 if (ind < numInPoints - 1)
                 {
-                    cout << ", ";
+                    cerr << ", ";
                 }
             }
-            cout << "\"" << endl;
-            if (config.order >= numInPoints)
+            cerr << "\"" << endl;
+            if (static_cast<size_t>(config.order) >= numInPoints)
             {
-                cout << "\nFor 'n' input points, the order number must not exceed 'n-1'.\n\n";
+                cerr << "\nFor 'n' input points, the order number must not exceed 'n-1'.\n\n";
             }
             exit(1);
         }
@@ -233,7 +239,13 @@ namespace
             }
 
             // N.B.: the non-blocking version returns -1 if in use -- flock(mutexFD, LOCK_EX | LOCK_NB) 
-            flock(config.flockMutex.mutexFD, LOCK_EX);
+            if (flock(config.flockMutex.mutexFD, LOCK_EX) == -1)
+            {
+                int err = errno;
+                cerr << "Failed to lock the lock file \'" << FLOCK_PATH << "\' (used as a resource mutex): "
+                        << strerror(err) << " (" << err << ")\n";
+                exit(1);
+            }
             // Lock is released automatically:
             // when you close(fd), when the process exits (even SIGKILL, even segfault)
             // for us, the destructor of the struct is called when it goes out of scope and calls close
@@ -317,7 +329,7 @@ int main(int argc, char **argv)
 
     //https://www.pluralsight.com/blog/software-development/how-to-measure-execution-time-intervals-in-c--
     // Record start time
-    auto start = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::steady_clock::now();
     
     MyKernel::Iso_rectangle_2 bbox = Utility_Functions::computeBBox(config.inputListVec);
 
@@ -339,10 +351,7 @@ int main(int argc, char **argv)
             MyPoint_2 pt0=it->first->vertex(MyDelaunay::cw(it->second))->point();
             MyPoint_2 pt1=it->first->vertex(MyDelaunay::ccw(it->second))->point();
             MyVertexI vertI_cgal = rti.insert(MyWeighted_point_2(CGAL::midpoint(pt0,pt1),-CGAL::squared_distance(pt0,pt1) / 4));
-            config.inputListVec.clear();
-            config.inputListVec.push_back(pt0);
-            config.inputListVec.push_back(pt1);
-            vertI_cgal -> info() = config.inputListVec;
+            vertI_cgal -> info() = vector<MyPoint_2>{pt0, pt1};   // the edge's two input points, used for order 3
         }
 
         // Order 3: for each pair of adjacent edges in the 2nd-order RT sharing
@@ -379,7 +388,7 @@ int main(int argc, char **argv)
                 }
             }
         }
-    } else if (config.order == (config.inputListVec.size() - 1))
+    } else if (static_cast<size_t>(config.order) == config.inputListVec.size() - 1)
     {
         // Order n-1: for each input point p, insert the centroid of all the other
         // points, with weight = -(sum of their squared pairwise distances) / (n-1)^2.
@@ -444,7 +453,7 @@ int main(int argc, char **argv)
 
     sStream << Pretty_Print::wrapStringInQuotes(ELAPSED_TIME_NAME_STRING) << " : {";
     // Record end time
-    auto finish = std::chrono::high_resolution_clock::now();
+    auto finish = std::chrono::steady_clock::now();
 
 
     std::chrono::duration<double> elapsed = finish - start;

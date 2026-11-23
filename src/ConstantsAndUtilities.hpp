@@ -19,7 +19,8 @@
 
 #include <CGAL/Lazy_exact_nt.h>
 
-#include <CGAL/Compute_cone_boundaries_2.h>
+#include <CGAL/Simple_cartesian.h>
+#include <CGAL/CORE_Expr.h>
 
 #include <CGAL/Kernel/global_functions.h>
 #include <CGAL/enum.h>
@@ -113,8 +114,6 @@ namespace okvd
     typedef MyRegularI::Vertex_handle                                                       MyVertexI;
     typedef typename CGAL::Weighted_point_2<MyKernel>                                       MyWeighted_point_2;
     typedef MyKernel::Ray_2                                                                 MyRay_2;
-    typedef MyKernel::Segment_2                                                             MySegment_2;
-    typedef MyKernel::Line_2                                                                MyLine_2;
 
     struct Voronoi_from_tri
     { //Class using stream to get the voronoi diagram
