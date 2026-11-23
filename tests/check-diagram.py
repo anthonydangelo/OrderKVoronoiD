@@ -12,6 +12,7 @@
 #   grid points have different sets of k nearest sites, an output edge must cross (or
 #   pass within the tolerance of) the segment between them; this catches missing edges;
 # - zero-length edges (both endpoints the same point) and repeated edges are counted.
+# Repeated input points are counted once, as the program does.
 # The output prints 6 significant digits, so the tolerance is 1e-5 times the largest
 # coordinate. A grid point that lies almost exactly on an edge can still be counted as
 # uncovered now and then; look at such a case before concluding it is wrong.
@@ -22,7 +23,13 @@ def parse_args(argstr):
     m = re.search(r'-i (\S+)', argstr)
     pts = json.loads(m.group(1)) if m else []
     k = int(re.search(r'-o (\d+)', argstr).group(1))
-    return [tuple(map(float, p)) for p in pts], k
+    # The program removes exact duplicates (keeping the first copy), so do the same.
+    sites = []
+    for p in pts:
+        p = tuple(map(float, p))
+        if p not in sites:
+            sites.append(p)
+    return sites, k
 
 def dists(sites, q):
     return sorted(math.hypot(q[0] - s[0], q[1] - s[1]) for s in sites)

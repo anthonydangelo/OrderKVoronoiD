@@ -78,10 +78,10 @@ namespace
                 close(mutexFD); 
             }
         }
-        OKVDResourceMutex(const OKVDResourceMutex&) = delete;
-        OKVDResourceMutex& operator=(const OKVDResourceMutex&) = delete;
-        OKVDResourceMutex(OKVDResourceMutex&&) = delete;
-        OKVDResourceMutex& operator=(OKVDResourceMutex&&) = delete;        
+        OKVDResourceMutex(const OKVDResourceMutex &) = delete;
+        OKVDResourceMutex& operator=(const OKVDResourceMutex &) = delete;
+        OKVDResourceMutex(OKVDResourceMutex &&) = delete;
+        OKVDResourceMutex& operator=(OKVDResourceMutex &&) = delete;        
     };
 
     struct OKVDConfig
@@ -112,7 +112,7 @@ namespace
     
 
     //https://codeyarns.com/2015/01/30/how-to-parse-program-options-in-c-using-getopt_long/
-    bool ProcessArgs(int argc, char **argv, OKVDConfig &config) 
+    bool ProcessArgs(int argc, char **argv, OKVDConfig & config) 
     {
         const char *const short_opts = "i:o:h";
         const option long_opts[] = {
@@ -184,13 +184,15 @@ namespace
                 return false;
             }
         }
+        
+        Utility_Functions::removeDuplicatePoints(config.inputListVec);
         return true;
     }
 
-    void initializeOrDie(int argc, char **argv, OKVDConfig &config)
+    void initializeOrDie(int argc, char **argv, OKVDConfig & config)
     {
         if ((1 == argc) 
-            || !ProcessArgs(argc, argv, config) 
+            || ! ProcessArgs(argc, argv, config) 
             || config.inputListVec.empty() 
             || config.order < 1 // order is defaulted or set in ProcessArgs
             || config.order >= config.inputListVec.size())
@@ -243,7 +245,7 @@ namespace
     // Clips infinite Voronoi edges (rays, lines) to the bounding box,
     // converting them to finite segments suitable for output.   
     template <class T,class output_iterator>
-    bool cast_into_seg(const T &obj, const MyKernel::Iso_rectangle_2 &bbox, output_iterator out_it) 
+    bool cast_into_seg(const T & obj, const MyKernel::Iso_rectangle_2 & bbox, output_iterator out_it) 
     {
         CGAL::Object obj_cgal = CGAL::intersection(obj, bbox);
         MySegment_2 s;
@@ -260,7 +262,7 @@ namespace
     // converting them to finite segments suitable for output.  
     template<class iterator,class output_iterator>
     void cast_into_seg(const iterator first, const iterator end,
-                    const MyKernel::Iso_rectangle_2 &bbox, output_iterator out_it)
+                    const MyKernel::Iso_rectangle_2 & bbox, output_iterator out_it)
     {
         for (iterator it=first; it!=end; ++it)
         {
@@ -270,9 +272,9 @@ namespace
 
     // Collects the dual (Voronoi) edges from the triangulation, filters
     // degenerate segments, clips to bbox, and deduplicates endpoints.   
-    void build_dual_(Voronoi_from_tri &v_recup, const MyKernel::Iso_rectangle_2 &bbox, 
-                    vector< MyPoint_2 > &endpointsVec,
-                    vector< pair<size_t, size_t> > &segmentEndPtsVec)
+    void build_dual_(Voronoi_from_tri & v_recup, const MyKernel::Iso_rectangle_2 & bbox, 
+                    vector< MyPoint_2 > & endpointsVec,
+                    vector< pair<size_t, size_t> > & segmentEndPtsVec)
     {
         vector<MySegment_2> seg_cont;
         //filter degenerate segments
@@ -292,8 +294,8 @@ namespace
     }
 
     template<class Triangulation>
-    void build_dual_edge_list(Triangulation &T, const MyKernel::Iso_rectangle_2 &bbox, 
-                                vector< MyPoint_2 > &endpointsVec, vector< pair<size_t, size_t> > &segmentEndPtsVec)
+    void build_dual_edge_list(Triangulation & T, const MyKernel::Iso_rectangle_2 & bbox, 
+                                vector< MyPoint_2 > & endpointsVec, vector< pair<size_t, size_t> > & segmentEndPtsVec)
     {
         //~ template<class GT,class TDS>
         //~ void draw_dual_in_ipe(const CGAL::Triangulation_2<GT,TDS>& T,const Iso_rectangle_2& bbox) const{

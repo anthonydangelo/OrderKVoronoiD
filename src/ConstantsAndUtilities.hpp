@@ -62,16 +62,16 @@
 
 //magic numbers
 constexpr int DEFAULT_ORDER = 1;
-constexpr int BBOX_OFFSET = 10;
+constexpr int BBOX_OFFSET   = 10;
 
-constexpr const char* ELAPSED_TIME_NAME_STRING = "elapsedTime";
-constexpr const char* ORDER_NAME_STRING = "order";
-constexpr const char* VD_NAME_STRING = "voronoiDiagram";
-constexpr const char* VD_POINTS_NAME_STRING = "voronoiPoints";
-constexpr const char* VD_EDGE_LIST_PT_INDICES_NAME_STRING = "voronoiEdgesPtIndices";
-constexpr const char* VD_EDGE_NAME_STRING = "voronoiEdge";
-constexpr const char* VD_EDGE_FIRST_INDEX_NAME_STRING = "firstIndex";
-constexpr const char* VD_EDGE_SECOND_INDEX_NAME_STRING = "secondIndex";
+constexpr const char* ELAPSED_TIME_NAME_STRING              = "elapsedTime";
+constexpr const char* ORDER_NAME_STRING                     = "order";
+constexpr const char* VD_NAME_STRING                        = "voronoiDiagram";
+constexpr const char* VD_POINTS_NAME_STRING                 = "voronoiPoints";
+constexpr const char* VD_EDGE_LIST_PT_INDICES_NAME_STRING   = "voronoiEdgesPtIndices";
+constexpr const char* VD_EDGE_NAME_STRING                   = "voronoiEdge";
+constexpr const char* VD_EDGE_FIRST_INDEX_NAME_STRING       = "firstIndex";
+constexpr const char* VD_EDGE_SECOND_INDEX_NAME_STRING      = "secondIndex";
 //////////////////////////////
 
 constexpr double DOUBLE_EPSILON = 0.000001;
@@ -96,7 +96,7 @@ namespace okvd
     typedef CGAL::Simple_cartesian< Lazy_FT > MyKernel;
 
 //https://doc.cgal.org/latest/Arrangement_on_surface_2/index.html
-    typedef MyKernel::FT                                                        My_Number_type;
+    typedef MyKernel::FT                                                      My_Number_type;
 
     typedef MyKernel::Point_2                                                 MyPoint_2;
     typedef MyKernel::Segment_2                                               MySegment_2;
@@ -122,9 +122,9 @@ namespace okvd
         list<MyLine_2> line_list;
         list<MySegment_2> seg_list;
 
-        void operator<<(const MyRay_2 &p) { ray_list.push_back(p); }
-        void operator<<(const MyLine_2 &p) { line_list.push_back(p); }
-        void operator<<(const MySegment_2 &p) { seg_list.push_back(p); }
+        void operator<<(const MyRay_2 & p) { ray_list.push_back(p); }
+        void operator<<(const MyLine_2 & p) { line_list.push_back(p); }
+        void operator<<(const MySegment_2 & p) { seg_list.push_back(p); }
     };
 
 
@@ -141,10 +141,12 @@ namespace okvd
     namespace Utility_Functions
     {
 
-        bool extractPointsFromJSON2DArrayString(const string &inputString, vector< MyPoint_2 > &result);
+        bool extractPointsFromJSON2DArrayString(const string & inputString, vector< MyPoint_2 > & result);
+
+        void removeDuplicatePoints(vector< MyPoint_2 > & points);
 
         //Assume the numbers aren't too large or small for doubles
-        inline bool pointsAreTooClose(const MyPoint_2 &first, const MyPoint_2 &second)
+        inline bool pointsAreTooClose(const MyPoint_2 & first, const MyPoint_2 & second)
         {
             return ( (fabs(CGAL::to_double(first.x()) - CGAL::to_double(second.x())) < DOUBLE_EPSILON) 
                     && (fabs(CGAL::to_double(first.y()) - CGAL::to_double(second.y())) < DOUBLE_EPSILON) );
@@ -161,7 +163,7 @@ namespace okvd
         */
         //https://stackoverflow.com/questions/46485084/declare-template-function-to-accept-any-container-but-only-one-contained-type/46485265
         template < template < class ... > class Container, class ... Args >
-        bool findPointIndex(const MyPoint_2 &pt, const Container< MyPoint_2, Args... > &myColl, size_t &myIndex)
+        bool findPointIndex(const MyPoint_2 & pt, const Container< MyPoint_2, Args... > & myColl, size_t & myIndex)
         {
             myIndex = 0;
             if(!myColl.empty()){
@@ -175,9 +177,9 @@ namespace okvd
             return false;
         }
 
-        void insertSegmentEndpointsIntoPointSet(const vector<MySegment_2> &segmentList, 
-                                                vector< MyPoint_2 > &endpointsVec,
-                                                vector< pair<size_t, size_t> > &segmentEndPtsVec);  
+        void insertSegmentEndpointsIntoPointSet(const vector<MySegment_2> & segmentList, 
+                                                vector< MyPoint_2 > & endpointsVec,
+                                                vector< pair<size_t, size_t> > & segmentEndPtsVec);  
 
         MyKernel::Iso_rectangle_2 computeBBox(const vector<MyPoint_2> &inputListVec);
 
@@ -190,12 +192,12 @@ namespace okvd
  */
     namespace Pretty_Print
     {
-        inline string wrapStringInQuotes(const string &s)
+        inline string wrapStringInQuotes(const string & s)
         {
             return ("\"" + s + "\"");
         }
 
-        inline string point2ToJSON(const MyPoint_2 &p)
+        inline string point2ToJSON(const MyPoint_2 & p)
         {
             ostringstream sStream;
 
@@ -218,12 +220,12 @@ namespace okvd
             return sStream.str();
         }
 
-        string pointVectorToJSONString(string name, const vector< MyPoint_2 > &myColl, int tabLevel = 0);
+        string pointVectorToJSONString(string name, const vector< MyPoint_2 > & myColl, int tabLevel = 0);
 
-        string segmentsIndicesToJSONString(string name, const vector< pair<size_t, size_t> > &segmentList, int tabLevel = 0);
+        string segmentsIndicesToJSONString(string name, const vector< pair<size_t, size_t> > & segmentList, int tabLevel = 0);
 
-        string voronoiDiagramToJSONString(const vector< MyPoint_2 > &endpointsVec, 
-                                            const vector< pair<size_t, size_t> > &segmentEndPtsVec, 
+        string voronoiDiagramToJSONString(const vector< MyPoint_2 > & endpointsVec, 
+                                            const vector< pair<size_t, size_t> > & segmentEndPtsVec, 
                                             int tabLevel = 0);
     
     } // namespace Pretty_Print

@@ -10,7 +10,7 @@ namespace okvd
     {
         using std::exception;
 
-        bool extractPointsFromJSON2DArrayString(const string &inputString, vector< MyPoint_2 > &result)
+        bool extractPointsFromJSON2DArrayString(const string & inputString, vector< MyPoint_2 > & result)
         {
             //NB: The string processing is a bit more flexible than the PrintHelp message suggests
             //TODO: consider switching to using a regex here
@@ -71,10 +71,40 @@ namespace okvd
             return true;
         }   
 
+        // Removes exact duplicates from the input points, keeping the first copy of
+        // each, with a warning on stderr. The Delaunay triangulation used for k = 1, 2
+        // and 3 ignores repeated points, but the k = n-1 and general paths would count
+        // them, so a repeated point would give an inconsistent diagram.
+        void removeDuplicatePoints(vector< MyPoint_2 > & points)
+        {
+            vector< MyPoint_2 > distinct;
+            for (const MyPoint_2 & p : points)
+            {
+                bool seen = false;
+                for (const MyPoint_2 & q : distinct)
+                {
+                    if (p == q)
+                    {
+                        seen = true;
+                        break;
+                    }
+                }
+                if (seen)
+                {
+                    cerr << "WARNING: the point (" << p.x() << ", " << p.y()
+                         << ") is given more than once; using it once." << endl;
+                }
+                else
+                {
+                    distinct.push_back(p);
+                }
+            }
+            points.swap(distinct);
+        }
         
-        void insertSegmentEndpointsIntoPointSet(const vector<MySegment_2> &segmentList, 
-                                                vector< MyPoint_2 > &endpointsVec,
-                                                vector< pair<size_t, size_t> > &segmentEndPtsVec)
+        void insertSegmentEndpointsIntoPointSet(const vector<MySegment_2> & segmentList, 
+                                                vector< MyPoint_2 > & endpointsVec,
+                                                vector< pair<size_t, size_t> > & segmentEndPtsVec)
         {
             for(auto it = segmentList.begin(); it != segmentList.end(); ++it)
             {
@@ -100,7 +130,7 @@ namespace okvd
         // Computes the axis-aligned bounding box of the input points,
         // expanded by BBOX_OFFSET in each direction to ensure the clipped
         // Voronoi diagram has visible context around the convex hull.   
-        MyKernel::Iso_rectangle_2 computeBBox(const vector<MyPoint_2> &inputListVec)
+        MyKernel::Iso_rectangle_2 computeBBox(const vector<MyPoint_2> & inputListVec)
         {
             //numeric_limits<double>::min() is the smallest positive number, lowest is farthest negative
             double maxX = std::numeric_limits<double>::lowest();
@@ -108,7 +138,7 @@ namespace okvd
             double minX = std::numeric_limits<double>::max();
             double minY = std::numeric_limits<double>::max();
 
-            for (const MyPoint_2 &p : inputListVec)
+            for (const MyPoint_2 & p : inputListVec)
             {
                 if (p.x() > maxX)
                 {

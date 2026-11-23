@@ -27,8 +27,10 @@ collinear4-k1|4 collinear points, k=1 (parallel lines)|-i [[0,0],[1,0],[2,0],[3,
 collinear4-k2|4 collinear points, k=2|-i [[0,0],[1,0],[2,0],[3,0]] -o 2
 close-pair-k1|two points 1e-7 apart (under the 1e-6 output tolerance), k=1|-i [[0,0],[1e-7,0],[3,1],[1,3]] -o 1
 duplicate-k2|a repeated point, k=2|-i [[0,0],[0,0],[2,0],[0,2],[2,2]] -o 2
+duplicate-k4|a repeated point, general k=4|-i [[0,0],[0,0],[2,0],[0,2],[2,2],[3,1],[1,3]] -o 4
 # Errors (exit 1 expected):
 err-order-n|order equal to n|-i [[0,0],[1,0],[0,1]] -o 3
 err-one-point|a single point|-i [[0,0]] -o 1
 err-malformed|malformed list|-i [[0,0],[1,x]] -o 1
 err-no-input|no -i|-o 1
+err-order-after-dedup|a repeated point leaves too few points for the order|-i [[0,0],[0,0],[1,0]] -o 2
