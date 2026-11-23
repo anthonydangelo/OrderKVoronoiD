@@ -39,13 +39,13 @@ DEBUG_FLAGS   := -g
 ASAN_FLAGS    := -O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize=vptr $(WARN_FLAGS)
 
 LDFLAGS      := -static -L$(CGAL_DIR)/lib
-LIBS         := -lCGAL_Core -lCGAL -lmpfr -lgmp -lboost_thread -lboost_system -lpthread
-DEBUG_LIBS   := -lCGAL_Core_d -lCGAL_d -lmpfr -lgmp -lboost_thread -lboost_system -lpthread
+LIBS         := -lCGAL -lmpfr -lgmp -lboost_thread -lboost_system -lpthread
+DEBUG_LIBS   := -lCGAL_d -lmpfr -lgmp -lboost_thread -lboost_system -lpthread
 # For the asan build: the third-party libraries static (-Bstatic), then back to dynamic
 # (-Bdynamic) for pthread and the libraries g++ adds itself (libc, libstdc++, libasan,
 # libubsan).
 ASAN_LDFLAGS  := -L$(CGAL_DIR)/lib
-ASAN_LIBS     := -Wl,-Bstatic -lCGAL_Core -lCGAL -lmpfr -lgmp -lboost_thread -lboost_system \
+ASAN_LIBS     := -Wl,-Bstatic -lCGAL -lmpfr -lgmp -lboost_thread -lboost_system \
                  -Wl,-Bdynamic -lpthread
 
 .PHONY: all release debug asan variants clean check-cgal
