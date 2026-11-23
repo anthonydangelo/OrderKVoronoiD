@@ -219,13 +219,14 @@ namespace okvd
             return sStream.str();
         }
 
-        string pointVectorToJSONString(string name, const vector< MyPoint_2 > & myColl, int tabLevel = 0);
+        // These write straight to the given stream (e.g. cout) instead of building a string.
+        void writePointVectorJSON(std::ostream & out, const string & name, const vector< MyPoint_2 > & myColl, int tabLevel = 0);
 
-        string segmentsIndicesToJSONString(string name, const vector< pair<size_t, size_t> > & segmentList, int tabLevel = 0);
+        void writeSegmentsIndicesJSON(std::ostream & out, const string & name, const vector< pair<size_t, size_t> > & segmentList, int tabLevel = 0);
 
-        string voronoiDiagramToJSONString(const vector< MyPoint_2 > & endpointsVec, 
-                                            const vector< pair<size_t, size_t> > & segmentEndPtsVec, 
-                                            int tabLevel = 0);
+        void writeVoronoiDiagramJSON(std::ostream & out, const vector< MyPoint_2 > & endpointsVec, 
+                                        const vector< pair<size_t, size_t> > & segmentEndPtsVec, 
+                                        int tabLevel = 0);
     
     } // namespace Pretty_Print
 } // namespace okvd

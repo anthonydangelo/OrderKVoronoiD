@@ -321,151 +321,171 @@ namespace
 
 int main(int argc, char **argv)
 {    
-    OKVDConfig config;
-    vector< MyPoint_2 > endpointsVec;
-    vector< pair<size_t, size_t> > segmentEndPtsVec;
-
-    initializeOrDie(argc, argv, config);
-
-    //https://www.pluralsight.com/blog/software-development/how-to-measure-execution-time-intervals-in-c--
-    // Record start time
-    auto start = std::chrono::steady_clock::now();
-    
-    MyKernel::Iso_rectangle_2 bbox = Utility_Functions::computeBBox(config.inputListVec);
-
-    MyDelaunay dt;
-    MyRegularI rti;
-    MyRegularTriangulation rt;
-    
-    dt.insert(config.inputListVec.begin(), config.inputListVec.end());
-
-
-    if ((2 == config.order) || (3 == config.order)) 
+    try
     {
-        // Delaunay and Voronoi for 2nd-3rd order
-        // Order 2: for each edge of the 1st-order Delaunay, insert the midpoint
-        // with weight = -(edge length)^2 / 4. The regular triangulation of these
-        // is the 2nd-order Delaunay.   
-        for (MyDelaunay::Finite_edges_iterator it=dt.finite_edges_begin(); it!=dt.finite_edges_end(); ++it)
+        OKVDConfig config;
+        vector< MyPoint_2 > endpointsVec;
+        vector< pair<size_t, size_t> > segmentEndPtsVec;
+
+        initializeOrDie(argc, argv, config);
+
+        //https://www.pluralsight.com/blog/software-development/how-to-measure-execution-time-intervals-in-c--
+        // Record start time
+        auto start = std::chrono::steady_clock::now();
+        
+        MyKernel::Iso_rectangle_2 bbox = Utility_Functions::computeBBox(config.inputListVec);
+
+        MyDelaunay dt;
+        MyRegularI rti;
+        MyRegularTriangulation rt;
+        
+        dt.insert(config.inputListVec.begin(), config.inputListVec.end());
+
+
+        if ((2 == config.order) || (3 == config.order)) 
         {
-            MyPoint_2 pt0=it->first->vertex(MyDelaunay::cw(it->second))->point();
-            MyPoint_2 pt1=it->first->vertex(MyDelaunay::ccw(it->second))->point();
-            MyVertexI vertI_cgal = rti.insert(MyWeighted_point_2(CGAL::midpoint(pt0,pt1),-CGAL::squared_distance(pt0,pt1) / 4));
-            vertI_cgal -> info() = vector<MyPoint_2>{pt0, pt1};   // the edge's two input points, used for order 3
-        }
-
-        // Order 3: for each pair of adjacent edges in the 2nd-order RT sharing
-        // a common original point, insert the centroid of the 3 original points
-        // with weight = -(sum of squared pairwise distances) / 9.   
-        if (3 == config.order)
-        { 
-            //Pour l'order 3
-            //CAN WE ITERATE OVER DELAUNEY TRIANGLES???
-            //WE MAY COUNT SEVERAL TIME SAME TRIANGLE WITH THE FOLLOWING METHOD
-            //iterate over adjacent point in the regular triangulation and compute a new wpoint for those having one commun parent from delaunay
-            for (MyRegularI::Finite_edges_iterator it = rti.finite_edges_begin(); it != rti.finite_edges_end(); ++it)
+            // Delaunay and Voronoi for 2nd-3rd order
+            // Order 2: for each edge of the 1st-order Delaunay, insert the midpoint
+            // with weight = -(edge length)^2 / 4. The regular triangulation of these
+            // is the 2nd-order Delaunay.   
+            for (MyDelaunay::Finite_edges_iterator it=dt.finite_edges_begin(); it!=dt.finite_edges_end(); ++it)
             {
-                MyPoint_2 pt0_ori0 = it->first->vertex(MyDelaunay::cw(it->second))->info().front();
-                MyPoint_2 pt0_ori1 = it->first->vertex(MyDelaunay::cw(it->second))->info().back();
-                MyPoint_2 pt1_ori0 = it->first->vertex(MyDelaunay::ccw(it->second))->info().front();
-                MyPoint_2 pt1_ori1 = it->first->vertex(MyDelaunay::ccw(it->second))->info().back();
+                MyPoint_2 pt0=it->first->vertex(MyDelaunay::cw(it->second))->point();
+                MyPoint_2 pt1=it->first->vertex(MyDelaunay::ccw(it->second))->point();
+                MyVertexI vertI_cgal = rti.insert(MyWeighted_point_2(CGAL::midpoint(pt0,pt1),-CGAL::squared_distance(pt0,pt1) / 4));
+                vertI_cgal -> info() = vector<MyPoint_2>{pt0, pt1};   // the edge's two input points, used for order 3
+            }
 
-                if (CGAL::compare_xy(pt0_ori0, pt1_ori0) == CGAL::EQUAL || CGAL::compare_xy(pt0_ori1, pt1_ori0) == CGAL::EQUAL)
+            // Order 3: for each pair of adjacent edges in the 2nd-order RT sharing
+            // a common original point, insert the centroid of the 3 original points
+            // with weight = -(sum of squared pairwise distances) / 9.   
+            if (3 == config.order)
+            { 
+                //Pour l'order 3
+                //CAN WE ITERATE OVER DELAUNEY TRIANGLES???
+                //WE MAY COUNT SEVERAL TIME SAME TRIANGLE WITH THE FOLLOWING METHOD
+                //iterate over adjacent point in the regular triangulation and compute a new wpoint for those having one commun parent from delaunay
+                for (MyRegularI::Finite_edges_iterator it = rti.finite_edges_begin(); it != rti.finite_edges_end(); ++it)
                 {
-                    rt.insert(MyWeighted_point_2(CGAL::centroid(pt0_ori0, pt0_ori1, pt1_ori1),
-                                                 -(CGAL::squared_distance(pt0_ori0, pt0_ori1)
-                                                   + CGAL::squared_distance(pt0_ori0, pt1_ori1)
-                                                   + CGAL::squared_distance(pt1_ori1, pt0_ori1)) 
-						 / 9));
+                    MyPoint_2 pt0_ori0 = it->first->vertex(MyDelaunay::cw(it->second))->info().front();
+                    MyPoint_2 pt0_ori1 = it->first->vertex(MyDelaunay::cw(it->second))->info().back();
+                    MyPoint_2 pt1_ori0 = it->first->vertex(MyDelaunay::ccw(it->second))->info().front();
+                    MyPoint_2 pt1_ori1 = it->first->vertex(MyDelaunay::ccw(it->second))->info().back();
+
+                    if (CGAL::compare_xy(pt0_ori0, pt1_ori0) == CGAL::EQUAL || CGAL::compare_xy(pt0_ori1, pt1_ori0) == CGAL::EQUAL)
+                    {
+                        rt.insert(MyWeighted_point_2(CGAL::centroid(pt0_ori0, pt0_ori1, pt1_ori1),
+                                                    -(CGAL::squared_distance(pt0_ori0, pt0_ori1)
+                                                    + CGAL::squared_distance(pt0_ori0, pt1_ori1)
+                                                    + CGAL::squared_distance(pt1_ori1, pt0_ori1)) 
+                            / 9));
+                    }
+                    else if (CGAL::compare_xy(pt0_ori0, pt1_ori1) == CGAL::EQUAL || CGAL::compare_xy(pt0_ori1, pt1_ori1) == CGAL::EQUAL)
+                    {
+                        rt.insert(MyWeighted_point_2(CGAL::centroid(pt0_ori0, pt0_ori1, pt1_ori0),
+                                                    -(CGAL::squared_distance(pt0_ori0, pt0_ori1)
+                                                    + CGAL::squared_distance(pt0_ori0, pt1_ori0)
+                                                    + CGAL::squared_distance(pt1_ori0, pt0_ori1)) 
+                            / 9));
+                    }
                 }
-                else if (CGAL::compare_xy(pt0_ori0, pt1_ori1) == CGAL::EQUAL || CGAL::compare_xy(pt0_ori1, pt1_ori1) == CGAL::EQUAL)
+            }
+        } else if (static_cast<size_t>(config.order) == config.inputListVec.size() - 1)
+        {
+            // Order n-1: for each input point p, insert the centroid of all the other
+            // points, with weight = -(sum of their squared pairwise distances) / (n-1)^2.
+            // The sums over all points are computed once, and each p's terms subtracted:
+            // O(n^2) in all, instead of O(n^3) for the general method with k = n-1
+            // (n subsets of n-1 points, O(n^2) pairs each).
+            // Computed in the kernel's exact number type, so the weighted points are exact.
+            My_Number_type pt_x0 = 0; // sum of the x coordinates of all input points
+            My_Number_type pt_y0 = 0; // sum of the y coordinates of all input points
+            My_Number_type wt = 0;    // sum of the squared distances between all pairs of input points
+            for (vector<MyPoint_2>::iterator it_pt = config.inputListVec.begin(); it_pt != config.inputListVec.end(); ++it_pt)
+            {
+                pt_x0 = pt_x0 + (*it_pt).x();
+                pt_y0 = pt_y0 + (*it_pt).y();
+                for (vector<MyPoint_2>::iterator it_pt2 = it_pt + 1; it_pt2 != config.inputListVec.end(); ++it_pt2)
                 {
-                    rt.insert(MyWeighted_point_2(CGAL::centroid(pt0_ori0, pt0_ori1, pt1_ori0),
-                                                 -(CGAL::squared_distance(pt0_ori0, pt0_ori1)
-                                                   + CGAL::squared_distance(pt0_ori0, pt1_ori0)
-                                                   + CGAL::squared_distance(pt1_ori0, pt0_ori1)) 
-						 / 9));
+                    wt = wt + CGAL::squared_distance(*it_pt, *it_pt2);
                 }
             }
-        }
-    } else if (static_cast<size_t>(config.order) == config.inputListVec.size() - 1)
-    {
-        // Order n-1: for each input point p, insert the centroid of all the other
-        // points, with weight = -(sum of their squared pairwise distances) / (n-1)^2.
-        // The sums over all points are computed once, and each p's terms subtracted:
-        // O(n^2) in all, instead of O(n^3) for the general method with k = n-1
-        // (n subsets of n-1 points, O(n^2) pairs each).
-        // Computed in the kernel's exact number type, so the weighted points are exact.
-        My_Number_type pt_x0 = 0; // sum of the x coordinates of all input points
-        My_Number_type pt_y0 = 0; // sum of the y coordinates of all input points
-        My_Number_type wt = 0;    // sum of the squared distances between all pairs of input points
-        for (vector<MyPoint_2>::iterator it_pt = config.inputListVec.begin(); it_pt != config.inputListVec.end(); ++it_pt)
-        {
-            pt_x0 = pt_x0 + (*it_pt).x();
-            pt_y0 = pt_y0 + (*it_pt).y();
-            for (vector<MyPoint_2>::iterator it_pt2 = it_pt + 1; it_pt2 != config.inputListVec.end(); ++it_pt2)
+            for (vector<MyPoint_2>::iterator it_pt = config.inputListVec.begin(); it_pt != config.inputListVec.end(); ++it_pt)
             {
-                wt = wt + CGAL::squared_distance(*it_pt, *it_pt2);
+                My_Number_type w = wt;
+                // centroid of the input points other than *it_pt
+                My_Number_type pt_x = pt_x0 - (*it_pt).x();
+                My_Number_type pt_y = pt_y0 - (*it_pt).y();
+                // remove from w the squared distances from *it_pt to the other points
+                for (vector<MyPoint_2>::iterator it_pt2 = config.inputListVec.begin(); it_pt2 != config.inputListVec.end(); ++it_pt2)
+                {
+                    w = w - CGAL::squared_distance(*it_pt, *it_pt2);
+                }
+                w = -w / (config.order * config.order);
+                pt_x = pt_x / config.order;
+                pt_y = pt_y / config.order;
+                rt.insert(MyWeighted_point_2(MyPoint_2(pt_x, pt_y), w));
             }
-        }
-        for (vector<MyPoint_2>::iterator it_pt = config.inputListVec.begin(); it_pt != config.inputListVec.end(); ++it_pt)
+        } 
+        else
         {
-            My_Number_type w = wt;
-            // centroid of the input points other than *it_pt
-            My_Number_type pt_x = pt_x0 - (*it_pt).x();
-            My_Number_type pt_y = pt_y0 - (*it_pt).y();
-            // remove from w the squared distances from *it_pt to the other points
-            for (vector<MyPoint_2>::iterator it_pt2 = config.inputListVec.begin(); it_pt2 != config.inputListVec.end(); ++it_pt2)
-            {
-                w = w - CGAL::squared_distance(*it_pt, *it_pt2);
-            }
-            w = -w / (config.order * config.order);
-            pt_x = pt_x / config.order;
-            pt_y = pt_y / config.order;
-            rt.insert(MyWeighted_point_2(MyPoint_2(pt_x, pt_y), w));
+            //k-th Delauney and Voronoi
+            k_delaunay<MyKernel>(rt, config.inputListVec, config.order);
         }
-    } 
-    else
-    {
-        //k-th Delauney and Voronoi
-        k_delaunay<MyKernel>(rt, config.inputListVec, config.order);
+
+        if (1 == config.order)
+        {
+            build_dual_edge_list(dt, bbox, endpointsVec, segmentEndPtsVec);
+        } 
+        else if (2 == config.order)
+        {
+            build_dual_edge_list(rti, bbox, endpointsVec, segmentEndPtsVec);
+        }
+        else 
+        {
+            build_dual_edge_list(rt, bbox, endpointsVec, segmentEndPtsVec);
+        }
+
+        // Record end time: the elapsed time is the computation only, not writing the output.
+        auto finish = std::chrono::steady_clock::now();
+
+        // Write the result straight to cout instead of building it as a string first.
+        cout << "{\n" << Pretty_Print::wrapStringInQuotes(ORDER_NAME_STRING) << ": \"" << config.order << "\",";
+        cout << "\n" << Pretty_Print::wrapStringInQuotes(VD_NAME_STRING) << ": ";
+        Pretty_Print::writeVoronoiDiagramJSON(cout, endpointsVec, segmentEndPtsVec);
+        cout << ",\n";
+
+        cout << Pretty_Print::wrapStringInQuotes(ELAPSED_TIME_NAME_STRING) << " : {";
+
+        std::chrono::duration<double> elapsed = finish - start;
+        double timeInSecs = elapsed.count();
+        long timeNumb = static_cast<long>(floor(timeInSecs));
+
+        cout << "\"s\":\"" << (timeNumb % 60) << "\", \"m\":\"";
+        timeNumb /= 60;
+        cout << (timeNumb % 60) << "\", \"h\":\""; 
+        timeNumb /= 60;
+        cout << timeNumb << "\" }\n }" << endl;
+
+        // A failed write (e.g. a full disk) only sets the stream's error state;
+        // report it instead of exiting with 0.
+        if (!cout)
+        {
+            cerr << "ERROR: writing the output failed" << endl;
+            return 1;
+        }
+
+        return 0;
     }
-
-    if (1 == config.order)
+    catch (const std::exception & e)
     {
-        build_dual_edge_list(dt, bbox, endpointsVec, segmentEndPtsVec);
-    } 
-    else if (2 == config.order)
-    {
-        build_dual_edge_list(rti, bbox, endpointsVec, segmentEndPtsVec);
+        // e.g. a CGAL precondition failure: report it and exit with 1 instead of aborting
+        cerr << "ERROR: " << e.what() << endl;
+        return 1;
     }
-    else 
+    catch (...)
     {
-        build_dual_edge_list(rt, bbox, endpointsVec, segmentEndPtsVec);
+        cerr << "ERROR: unknown exception" << endl;
+        return 1;
     }
-
-    ostringstream sStream;
-
-
-    sStream << "{\n" << Pretty_Print::wrapStringInQuotes(ORDER_NAME_STRING) << ": \"" << config.order << "\",";
-    sStream << "\n" << Pretty_Print::wrapStringInQuotes(VD_NAME_STRING) << ": ";
-    sStream << Pretty_Print::voronoiDiagramToJSONString(endpointsVec, segmentEndPtsVec) << ",\n";
-
-    sStream << Pretty_Print::wrapStringInQuotes(ELAPSED_TIME_NAME_STRING) << " : {";
-    // Record end time
-    auto finish = std::chrono::steady_clock::now();
-
-
-    std::chrono::duration<double> elapsed = finish - start;
-    double timeInSecs = elapsed.count();
-    long timeNumb = static_cast<long>(floor(timeInSecs));
-
-    sStream << "\"s\":\"" << (timeNumb % 60) << "\", \"m\":\"";
-    timeNumb /= 60;
-    sStream << (timeNumb % 60) << "\", \"h\":\""; 
-    timeNumb /= 60;
-    sStream << timeNumb << "\" }\n }" << endl;
-    cout << sStream.str();
-
-    return 0;
 }
