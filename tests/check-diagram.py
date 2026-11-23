@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Checks OrderKVoronoiD outputs against a brute-force computation of the k nearest
-# sites, for every case in tests/cases.txt that asks for a diagram (the error cases
-# and -h are skipped).
+# sites, for every case in tests/cases.txt that asks for a valid diagram (the error
+# cases, -h, and the bad-order cases are skipped).
 #
 # Usage (from the repo root):
 #   python3 tests/check-diagram.py <label>          checks tests/out/<label>/
@@ -98,8 +98,10 @@ def main():
         if not line or line.startswith('#'):
             continue
         name, desc, args = line.split('|', 2)
-        # Only cases that ask for a diagram: the error cases and -h produce none.
-        if name.startswith('err') or not (re.search(r'-i \S', args) and re.search(r'-o \d', args)):
+        # Only cases that ask for a valid diagram: the error cases, -h, and the cases
+        # with an invalid order (bad-*, which fall back to order 1) are skipped.
+        if (name.startswith('err') or name.startswith('bad-')
+                or not (re.search(r'-i \S', args) and re.search(r'-o \d', args))):
             continue
         try:
             n, off_tie, checked, uncovered, zero, repeated = check(args, os.path.join(outdir, name + '.json'))

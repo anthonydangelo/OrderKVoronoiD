@@ -35,3 +35,6 @@ err-malformed|malformed list|-i [[0,0],[1,x]] -o 1
 err-no-input|no -i|-o 1
 err-order-after-dedup|a repeated point leaves too few points for the order|-i [[0,0],[0,0],[1,0]] -o 2
 help|-h prints the help on stdout and exits with 0|-h
+bad-order-text|-o not a number: warning, default order 1|-i [[0,0],[4,1],[1,5]] -o x
+bad-order-zero|-o 0: warning, default order 1|-i [[0,0],[4,1],[1,5]] -o 0
+bad-order-trailing|-o with trailing characters: warning, default order 1|-i [[0,0],[4,1],[1,5]] -o 2x

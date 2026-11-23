@@ -50,7 +50,8 @@
 #include "k_delaunay.h"
 #include <CGAL/Iso_rectangle_2.h>
 
-#include <chrono>  // for steady_clock
+#include <chrono>     // for steady_clock
+#include <stdexcept>  // std::invalid_argument, std::out_of_range
 #include <limits> 
 
 #include <fcntl.h>           /* For O_* constants */
@@ -112,6 +113,25 @@ namespace
         return;
     }
 
+    // Parses all of s as an int. Returns false (leaving result unchanged) if s
+    // has no digits ("abc"), trailing characters ("5abc"), or is out of int range.
+    // (std::stoi alone accepts "5abc" as 5.)
+    bool parseWholeInt(const char * s, int & result)
+    {
+        try
+        {
+            size_t pos = 0;
+            const int value = std::stoi(s, &pos);
+            if (s[pos] != '\0')
+            {
+                return false;
+            }
+            result = value;
+            return true;
+        }
+        catch (const std::invalid_argument &) { return false; }
+        catch (const std::out_of_range &)     { return false; }
+    }
     
 
     //https://codeyarns.com/2015/01/30/how-to-parse-program-options-in-c-using-getopt_long/
@@ -138,56 +158,50 @@ namespace
 
             switch (opt)
             {
-            case 'o':
-                if (optarg)
-                {
-                    try
+                case 'o':
+                    if (optarg)
                     {
-                        int temp = stoi(optarg);
-                        if (temp > 0)
+                        int temp = 0;
+                        if (parseWholeInt(optarg, temp) && temp > 0)
                         {
                             config.order = temp;
-                        } else 
+                        }
+                        else
                         {
-                            cerr << "ERROR: Invalid order. Using default of " << DEFAULT_ORDER << endl;
+                            config.order = DEFAULT_ORDER;
+                            cerr << "WARNING: Invalid order (must be a positive integer). Using default of "
+                                << DEFAULT_ORDER << endl;
                         }
                     }
-                    catch (...)
+                    break;
+
+                case 'i':
+                    if(optarg)
                     {
-                        config.order = DEFAULT_ORDER;
-                        cerr << endl << "Exception caught" << endl;
-                        cerr << "ERROR: Invalid order. Trying to move forward with default of " << DEFAULT_ORDER << endl;
+                        inPointsString = string(optarg);
+                        if ( !Utility_Functions::extractPointsFromJSON2DArrayString(inPointsString, config.inputListVec))
+                        {
+                            // malformed input point list. bounce back to user.
+                            // error message printed in function
+                            // config.inputListVec is returned empty
+                            return false;
+                        }
                     }
-                }
-                break;
+                    break;
 
-            case 'i':
-                if(optarg)
-                {
-                    inPointsString = string(optarg);
-                    if ( !Utility_Functions::extractPointsFromJSON2DArrayString(inPointsString, config.inputListVec))
-                    {
-                        // malformed input point list. bounce back to user.
-                        // error message printed in function
-                        // config.inputListVec is returned empty
-                        return false;
-                    }
-                }
-                break;
+                case 256:
+                    // request to not to use a resource mutex in the program.
+                    // this is useful if you want to manage a mutex in a bash script instead
+                    config.useMutex = false;
+                    break;
 
-            case 256:
-                // request to not to use a resource mutex in the program.
-                // this is useful if you want to manage a mutex in a bash script instead
-                config.useMutex = false;
-                break;
+                case 'h': // -h or --help: the help on stdout, and success
+                    PrintHelp(cout);
+                    exit(0);
 
-            case 'h': // -h or --help: the help on stdout, and success
-                PrintHelp(cout);
-                exit(0);
-
-            case '?': // Unrecognized option
-            default:
-                return false;
+                case '?': // Unrecognized option
+                default:
+                    return false;
             }
         }
         
