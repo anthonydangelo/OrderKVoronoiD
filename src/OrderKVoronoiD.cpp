@@ -2,10 +2,13 @@
 // Name        : OrderKVoronoiD.cpp
 // Author(s)   :- Sebastien Loriot, Sylvain Pion
 //              - Sebastien Loriot, Nicolas Carrez
-//              - Anthony D'Angelo (re-worked CGAL demos to output 
-//                                  a json object of the OKVD arrangement 
-//                                  clipped by a bounding box),
-// Version     :
+//              - Anthony D'Angelo (2018: re-worked the CGAL demo to output
+//                                  a JSON object of the order-k Voronoi
+//                                  diagram clipped by a bounding box;
+//                                  2026: exact rationals, fixes and tests,
+//                                  with help from an AI assistant; see the
+//                                  README's Acknowledgements)
+// Version     : 2.0 (see the git tags)
 // Copyright   : From the CGAL demos:
 /*
 // Copyright (c) 2005-2009  INRIA Sophia-Antipolis (France).
@@ -27,20 +30,29 @@
 // 
 //
 */
+// This file keeps the LGPL notice of the CGAL demo it is derived from; the
+// program as a whole links GPL parts of CGAL and is distributed under the GNU
+// General Public License v3 or later (see LICENSE).
 // Description : 
 /*
 ** Modified CGAL-4.11.2/demo/CGAL_ipelets/multi_delaunay.cpp
-** Computes the k-th order Voronoi diagram of n input points and outputs
-** the arrangement (clipped to a bounding box) as a JSON object on stdout.
+** Computes the order-k Voronoi diagram of n input points and outputs it
+** (clipped to a bounding box) as a JSON object on stdout.
 **
-** Algorithm: for each k-subset of input points, compute a weighted point
-** (centroid with weight = -sum of squared pairwise distances / k^2).
-** The regular triangulation of these weighted points is the k-th order
-** Delaunay; its dual is the k-th order Voronoi diagram.
+** Algorithm (from CGAL's multi_delaunay ipelet demo): for each k-subset of
+** input points, compute a weighted point (centroid with weight = -sum of
+** squared pairwise distances / k^2). The regular triangulation of these
+** weighted points is the order-k Delaunay triangulation; its dual is the
+** order-k Voronoi diagram.
 **
-** Special cases: k=1 uses standard Delaunay, k=2 and k=3 use optimized
-** paths, k=n-1 uses a closed-form, general k uses brute-force enumeration.
-** (Algorithm from CGAL's multi_delaunay ipelet demo.)   
+** Special cases: k=1 uses the standard Delaunay triangulation; k=2 and k=3
+** use only the subsets that can have non-empty regions; k=n-1 shares the
+** sums between subsets (O(n^2) instead of O(n^3)); any other k enumerates
+** all C(n,k) subsets, which limits the input size (see the README's
+** "Performance and limits").
+**
+** All weighted points and constructions are exact rationals
+** (Lazy_exact_nt<Gmpq>); see the README's "Exactness".
 */
 //============================================================================
 
